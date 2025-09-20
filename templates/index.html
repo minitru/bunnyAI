@@ -68,7 +68,7 @@
             border-radius: 8px;
             border-left: 4px solid #007bff;
             line-height: 1.6;
-            max-height: 800px;
+            max-height: 1000px;
             overflow-y: auto;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             position: relative;
@@ -169,6 +169,28 @@
             display: table;
             clear: both;
         }
+        .book-selector {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: white;
+            cursor: pointer;
+        }
+        .form-select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
         .quick-actions {
             margin: 20px 0;
             padding: 20px;
@@ -216,6 +238,15 @@
         </div>
         
         <div class="query-box">
+            <div class="book-selector">
+                <label for="book-choice" class="form-label">Select Book:</label>
+                <select id="book-choice" class="form-select">
+                    <option value="all">All Books</option>
+                    <option value="nonamekey">No Name Key</option>
+                    <option value="sidetrackkey">Sidetrack Key</option>
+                </select>
+            </div>
+            
             <textarea 
                 id="question" 
                 class="query-input" 
@@ -292,6 +323,7 @@
                 this.questionInput = document.getElementById('question');
                 this.submitBtn = document.getElementById('submit-btn');
                 this.responseDiv = document.getElementById('response');
+                this.bookChoice = document.getElementById('book-choice');
                 
                 this.setupEventListeners();
             }
@@ -318,6 +350,7 @@
             
             async submitQuery() {
                 const question = this.questionInput.value.trim();
+                const selectedBook = this.bookChoice.value;
                 
                 if (!question) {
                     this.showError('Please enter a question');
@@ -328,12 +361,17 @@
                 this.hideResponse();
                 
                 try {
+                    const requestBody = { question };
+                    if (selectedBook !== 'all') {
+                        requestBody.book = selectedBook;
+                    }
+                    
                     const response = await fetch('/api/query', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ question })
+                        body: JSON.stringify(requestBody)
                     });
                     
                     const data = await response.json();
