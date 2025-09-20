@@ -14,9 +14,9 @@ class ChromaUploader:
     def __init__(self):
         """Initialize ChromaDB Cloud client"""
         self.client = chromadb.CloudClient(
-            api_key='ck-3ZYHJbV3rG3Cw6Xx8dxBDXR7KvSEPUcdACWGbjMueSwo',
-            tenant='d92a3881-247b-4e1c-913c-9a361d3c1ade',
-            database='bunny'
+            api_key=os.getenv('CHROMADB_API_KEY'),
+            tenant=os.getenv('CHROMADB_TENANT'),
+            database=os.getenv('CHROMADB_DATABASE')
         )
         
     def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:

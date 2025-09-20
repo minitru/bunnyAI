@@ -21,11 +21,17 @@ class MultiBookRAG:
             openrouter_api_key: OpenRouter API key
         """
         # Initialize ChromaDB client
-        self.chroma_client = chromadb.CloudClient(
-            api_key=os.getenv('CHROMADB_API_KEY'),
-            tenant=os.getenv('CHROMADB_TENANT'),
-            database=os.getenv('CHROMADB_DATABASE')
-        )
+        chromadb_api_key = os.getenv('CHROMADB_API_KEY')
+        if chromadb_api_key and chromadb_api_key.strip():
+            # Use cloud client if API key is provided
+            self.chroma_client = chromadb.CloudClient(
+                api_key=chromadb_api_key,
+                tenant=os.getenv('CHROMADB_TENANT'),
+                database=os.getenv('CHROMADB_DATABASE')
+            )
+        else:
+            # Use local client if no API key
+            self.chroma_client = chromadb.Client()
         
         # Get collection
         self.collection = self.chroma_client.get_collection("multi_book_documents")

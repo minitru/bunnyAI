@@ -1,0 +1,25 @@
+# Environment Variables Template for bunnyAI
+# Copy this content to a .env file in your project root
+
+# OpenRouter API Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=openai/gpt-4o-mini
+OPENROUTER_MAX_TOKENS=1000
+OPENROUTER_TEMPERATURE=0.3
+OPENROUTER_FORCE_JSON=1
+
+# System Configuration
+QUESTION_FINAL_GRACE_MS=1200
+TOKENIZERS_PARALLELISM=false
+
+# ChromaDB Configuration
+CHROMADB_API_KEY=your_chromadb_api_key_here
+CHROMADB_TENANT=your_chromadb_tenant_here
+CHROMADB_DATABASE=your_chromadb_database_here
+
+# Instructions:
+# 1. Copy this content to a new file named .env in your project root
+# 2. Replace the placeholder values with your actual API keys and configuration
+# 3. Get your OpenRouter API key from: https://openrouter.ai/
+# 4. Get your ChromaDB credentials from your ChromaDB account
+
