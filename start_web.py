@@ -29,12 +29,13 @@ def start_web_app():
         return False
     
     print("✅ Environment checks passed")
-    print("🌐 Starting web server on http://localhost:7777")
+    print("🌐 Starting web server on all interfaces (0.0.0.0:7777)")
     print("📚 The system will initialize book knowledge on first startup...")
     print("⏳ This may take a few moments...")
     print()
-    print("🎯 Once started, open your browser and go to:")
-    print("   http://localhost:7777")
+    print("🎯 Once started, access the app at:")
+    print("   http://localhost:7777 (local access)")
+    print("   http://[your-ip]:7777 (network access)")
     print()
     print("🛑 Press Ctrl+C to stop the server")
     print("=" * 50)
