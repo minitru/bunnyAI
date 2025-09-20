@@ -85,23 +85,72 @@
             display: table;
             clear: both;
         }
+        .quick-actions {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .quick-actions h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .action-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .action-btn:hover {
+            background: #5a6268;
+        }
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            .action-btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🐰 Bunny AI</h1>
+            <p>Comprehensive Literary Analysis Assistant</p>
         </div>
         
         <div class="query-box">
             <textarea 
                 id="question" 
                 class="query-input" 
-                placeholder="Ask me anything about the books..."
-                rows="4"
+                placeholder="Ask for comprehensive literary analysis, including:&#10;• Dialogue vs. narrative analysis&#10;• Sentence structure & readability&#10;• Language & content analysis&#10;• Plot & character development&#10;• Theme & pacing analysis&#10;• Writing quality assessment&#10;&#10;Or ask any specific question about the books..."
+                rows="6"
             ></textarea>
             <div class="clearfix">
                 <button id="submit-btn" class="submit-btn">Ask</button>
+            </div>
+        </div>
+        
+        <div class="quick-actions">
+            <h3>Quick Analysis Options:</h3>
+            <div class="action-buttons">
+                <button class="action-btn" data-query="Provide a comprehensive literary analysis including dialogue vs. narrative usage, sentence stats, language analysis, plot structure, character development, themes, and writing quality assessment.">Full Analysis</button>
+                <button class="action-btn" data-query="Analyze the dialogue vs. narrative balance and sentence structure with readability scores.">Writing Style</button>
+                <button class="action-btn" data-query="Find explicit language, cliches, repetitive phrases, and misspellings.">Content Review</button>
+                <button class="action-btn" data-query="Analyze plot structure, narrative arc, pacing, and story elements.">Plot Analysis</button>
+                <button class="action-btn" data-query="Analyze character development, conflicts, themes, and provide key recommendations.">Character & Themes</button>
             </div>
         </div>
         
@@ -126,6 +175,15 @@
                         e.preventDefault();
                         this.submitQuery();
                     }
+                });
+                
+                // Quick action buttons
+                document.querySelectorAll('.action-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const query = btn.getAttribute('data-query');
+                        this.questionInput.value = query;
+                        this.submitQuery();
+                    });
                 });
             }
             
