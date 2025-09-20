@@ -32,10 +32,43 @@
                 <div class="col-md-3">
                     <div class="card">
                         <div class="card-header">
-                            <h5><i class="fas fa-books me-2"></i>Available Books</h5>
+                            <h5><i class="fas fa-books me-2"></i>Book Search</h5>
                         </div>
                         <div class="card-body">
-                            <div id="books-list">
+                            <!-- Search Input -->
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="book-search" placeholder="Search books...">
+                                </div>
+                            </div>
+                            
+                            <!-- Filter Options -->
+                            <div class="mb-3">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-sm btn-outline-primary filter-btn active" data-filter="all">
+                                        All
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="selected">
+                                        Selected
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info filter-btn" data-filter="recent">
+                                        Recent
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Book Count -->
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <span id="book-count">0</span> books available
+                                </small>
+                            </div>
+                            
+                            <!-- Books List -->
+                            <div id="books-list" class="books-container">
                                 <div class="text-center">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Loading...</span>
@@ -67,8 +100,13 @@
                 <div class="col-md-9">
                     <!-- Query Input -->
                     <div class="card mb-4">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5><i class="fas fa-search me-2"></i>Ask a Question</h5>
+                            <div class="selected-books-indicator">
+                                <small class="text-muted">
+                                    <span id="selected-count">All books</span> selected
+                                </small>
+                            </div>
                         </div>
                         <div class="card-body">
                             <form id="query-form">
@@ -81,6 +119,10 @@
                                         placeholder="Ask about characters, themes, plot, or compare the books..."
                                         required
                                     ></textarea>
+                                    <div class="form-text">
+                                        <i class="fas fa-lightbulb me-1"></i>
+                                        Try questions like: "What are the main themes?", "Compare the protagonists", "How do the stories end?"
+                                    </div>
                                 </div>
                                 
                                 <div class="row mb-3">
@@ -91,6 +133,7 @@
                                             <option value="80" selected>80 chunks (recommended)</option>
                                             <option value="120">120 chunks (comprehensive)</option>
                                         </select>
+                                        <div class="form-text">More chunks = more detailed analysis</div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-check mt-4">
@@ -98,13 +141,19 @@
                                             <label class="form-check-label" for="use-book-knowledge">
                                                 Use Book Knowledge
                                             </label>
+                                            <div class="form-text">Enable AI book knowledge for better analysis</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <button type="submit" class="btn btn-primary" id="submit-btn">
-                                    <i class="fas fa-paper-plane me-2"></i>Ask Question
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary" id="submit-btn">
+                                        <i class="fas fa-paper-plane me-2"></i>Ask Question
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="clear-btn">
+                                        <i class="fas fa-eraser me-2"></i>Clear
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>

@@ -4,7 +4,7 @@ Multi-Book Enhanced RAG API
 A clean REST API for literary analysis queries
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import os
 import time
@@ -27,21 +27,27 @@ def get_rag_instance():
     return rag_instance
 
 @app.route('/')
-def root():
-    """API root endpoint"""
+def index():
+    """Serve the main web interface"""
+    return render_template('index.html')
+
+@app.route('/api')
+def api_info():
+    """API information endpoint"""
     return jsonify({
         'name': 'Multi-Book Enhanced RAG API',
         'version': '1.0.0',
         'description': 'Literary analysis API for querying multiple books',
         'endpoints': {
-            'GET /': 'API information',
-            'GET /books': 'Get available books',
-            'POST /query': 'Query books for literary analysis',
-            'GET /status': 'Get system status'
+            'GET /': 'Web interface',
+            'GET /api': 'API information',
+            'GET /api/books': 'Get available books',
+            'POST /api/query': 'Query books for literary analysis',
+            'GET /api/status': 'Get system status'
         }
     })
 
-@app.route('/books', methods=['GET'])
+@app.route('/api/books', methods=['GET'])
 def get_books():
     """Get available books"""
     try:
@@ -57,7 +63,7 @@ def get_books():
             'error': str(e)
         }), 500
 
-@app.route('/query', methods=['POST'])
+@app.route('/api/query', methods=['POST'])
 def query_books():
     """
     Query the RAG system for literary analysis
@@ -134,7 +140,7 @@ def query_books():
             'error': str(e)
         }), 500
 
-@app.route('/status', methods=['GET'])
+@app.route('/api/status', methods=['GET'])
 def get_status():
     """Get system status"""
     try:
@@ -162,7 +168,7 @@ if __name__ == '__main__':
     try:
         get_rag_instance()
         print("✅ System initialized successfully!")
-        print("🌐 Starting web server on http://localhost:7777")
+        print("🌐 Starting web server on all interfaces (0.0.0.0:7777)")
     except Exception as e:
         print(f"❌ Failed to initialize system: {e}")
         exit(1)

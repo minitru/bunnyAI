@@ -4,6 +4,9 @@ class LiteraryAnalysisApp {
     constructor() {
         this.selectedBooks = [];
         this.books = [];
+        this.filteredBooks = [];
+        this.currentFilter = 'all';
+        this.searchTerm = '';
         this.init();
     }
 
@@ -11,6 +14,7 @@ class LiteraryAnalysisApp {
         await this.loadBooks();
         await this.loadSystemStatus();
         this.setupEventListeners();
+        this.setupSearchAndFilters();
     }
 
     async loadBooks() {
@@ -20,7 +24,9 @@ class LiteraryAnalysisApp {
             
             if (data.success) {
                 this.books = data.books;
+                this.filteredBooks = [...this.books];
                 this.renderBooks();
+                this.updateBookCount();
                 this.updateStatusIndicator('ready');
             } else {
                 this.showError('Failed to load books: ' + data.error);
@@ -48,40 +54,76 @@ class LiteraryAnalysisApp {
     renderBooks() {
         const booksList = document.getElementById('books-list');
         
-        if (this.books.length === 0) {
-            booksList.innerHTML = '<p class="text-muted">No books available</p>';
+        if (this.filteredBooks.length === 0) {
+            booksList.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-search fa-2x mb-2"></i>
+                    <p>No books found matching your criteria</p>
+                </div>
+            `;
             return;
         }
 
-        booksList.innerHTML = this.books.map(book => `
-            <div class="book-item" data-book-id="${book.book_id}" onclick="app.toggleBookSelection('${book.book_id}')">
-                <div class="book-title">${book.book_title}</div>
-                <div class="book-meta">
-                    <i class="fas fa-file-alt me-1"></i>
-                    ${book.chunk_count} chunks
-                    <br>
-                    <i class="fas fa-user me-1"></i>
-                    ${book.author}
+        booksList.innerHTML = this.filteredBooks.map(book => {
+            const isSelected = this.selectedBooks.includes(book.book_id);
+            const isAllSelected = this.selectedBooks.length === 0;
+            const selectedClass = (book.book_id === 'all' && isAllSelected) || isSelected ? 'selected' : '';
+            
+            return `
+                <div class="book-item ${selectedClass}" data-book-id="${book.book_id}" onclick="app.toggleBookSelection('${book.book_id}')">
+                    <div class="book-header">
+                        <div class="book-title">${this.highlightSearchTerm(book.book_title)}</div>
+                        <div class="book-actions">
+                            <i class="fas fa-${isSelected || (book.book_id === 'all' && isAllSelected) ? 'check-circle' : 'circle'} text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="book-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-file-alt me-1"></i>
+                            ${book.chunk_count} chunks
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-user me-1"></i>
+                            ${book.author || 'Unknown Author'}
+                        </div>
+                        ${book.genre ? `
+                        <div class="meta-item">
+                            <i class="fas fa-tag me-1"></i>
+                            ${book.genre}
+                        </div>
+                        ` : ''}
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
-        // Add "All Books" option
+        // Add "All Books" option at the top
+        const totalChunks = this.books.reduce((sum, book) => sum + book.chunk_count, 0);
+        const allBooksSelected = this.selectedBooks.length === 0;
+        
         booksList.innerHTML = `
-            <div class="book-item selected" data-book-id="all" onclick="app.toggleBookSelection('all')">
-                <div class="book-title">
-                    <i class="fas fa-books me-2"></i>
-                    All Books
+            <div class="book-item ${allBooksSelected ? 'selected' : ''}" data-book-id="all" onclick="app.toggleBookSelection('all')">
+                <div class="book-header">
+                    <div class="book-title">
+                        <i class="fas fa-books me-2"></i>
+                        All Books
+                    </div>
+                    <div class="book-actions">
+                        <i class="fas fa-${allBooksSelected ? 'check-circle' : 'circle'} text-primary"></i>
+                    </div>
                 </div>
                 <div class="book-meta">
-                    <i class="fas fa-chart-bar me-1"></i>
-                    ${this.books.reduce((sum, book) => sum + book.chunk_count, 0)} total chunks
+                    <div class="meta-item">
+                        <i class="fas fa-chart-bar me-1"></i>
+                        ${totalChunks} total chunks
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-layer-group me-1"></i>
+                        ${this.books.length} books
+                    </div>
                 </div>
             </div>
         ` + booksList.innerHTML;
-
-        // Select "All Books" by default
-        this.selectedBooks = [];
     }
 
     renderSystemStatus(status) {
@@ -134,6 +176,8 @@ class LiteraryAnalysisApp {
                 allBooksItem.classList.remove('selected');
             }
         }
+        
+        this.updateSelectedBooksIndicator();
     }
 
     setupEventListeners() {
@@ -142,6 +186,97 @@ class LiteraryAnalysisApp {
             e.preventDefault();
             this.submitQuery();
         });
+
+        // Clear button
+        const clearBtn = document.getElementById('clear-btn');
+        clearBtn.addEventListener('click', () => {
+            this.clearForm();
+        });
+    }
+
+    setupSearchAndFilters() {
+        // Search functionality
+        const searchInput = document.getElementById('book-search');
+        searchInput.addEventListener('input', (e) => {
+            this.searchTerm = e.target.value.toLowerCase();
+            this.filterBooks();
+        });
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update active button
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                this.currentFilter = e.target.dataset.filter;
+                this.filterBooks();
+            });
+        });
+    }
+
+    filterBooks() {
+        let filtered = [...this.books];
+
+        // Apply search filter
+        if (this.searchTerm) {
+            filtered = filtered.filter(book => 
+                book.book_title.toLowerCase().includes(this.searchTerm) ||
+                (book.author && book.author.toLowerCase().includes(this.searchTerm)) ||
+                (book.genre && book.genre.toLowerCase().includes(this.searchTerm))
+            );
+        }
+
+        // Apply category filter
+        switch (this.currentFilter) {
+            case 'selected':
+                filtered = filtered.filter(book => this.selectedBooks.includes(book.book_id));
+                break;
+            case 'recent':
+                // Sort by chunk count (assuming more chunks = more recent/important)
+                filtered = filtered.sort((a, b) => b.chunk_count - a.chunk_count).slice(0, 5);
+                break;
+            case 'all':
+            default:
+                // No additional filtering
+                break;
+        }
+
+        this.filteredBooks = filtered;
+        this.renderBooks();
+        this.updateBookCount();
+    }
+
+    highlightSearchTerm(text) {
+        if (!this.searchTerm) return text;
+        
+        const regex = new RegExp(`(${this.searchTerm})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    updateBookCount() {
+        const countElement = document.getElementById('book-count');
+        countElement.textContent = this.filteredBooks.length;
+    }
+
+    updateSelectedBooksIndicator() {
+        const indicator = document.getElementById('selected-count');
+        if (this.selectedBooks.length === 0) {
+            indicator.textContent = 'All books';
+        } else {
+            indicator.textContent = `${this.selectedBooks.length} book${this.selectedBooks.length > 1 ? 's' : ''}`;
+        }
+    }
+
+    clearForm() {
+        document.getElementById('question').value = '';
+        document.getElementById('n-results').value = '80';
+        document.getElementById('use-book-knowledge').checked = true;
+        
+        // Clear search
+        document.getElementById('book-search').value = '';
+        this.searchTerm = '';
+        this.filterBooks();
     }
 
     async submitQuery() {
