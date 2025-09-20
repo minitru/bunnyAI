@@ -48,7 +48,7 @@ class MultiBookRAG:
         
         # Configuration
         self.model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
-        self.max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "3000"))
+        self.max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))
         self.temperature = float(os.getenv("OPENROUTER_TEMPERATURE", "0.3"))
         self.force_json = os.getenv("OPENROUTER_FORCE_JSON", "1") == "1"
         self.question_final_grace_ms = int(os.getenv("QUESTION_FINAL_GRACE_MS", "1200"))
@@ -353,15 +353,21 @@ You are equipped to perform the following analyses on every request:
 - Structure responses clearly with appropriate headings and organization
 - Provide specific, measurable feedback when possible (e.g., readability scores, repetition counts)
 
-**SPECIAL INSTRUCTIONS FOR LINE EDITING:**
-- When performing line editing analysis, be extremely thorough and detail-oriented
-- Quote specific passages with exact line references when possible
-- Categorize errors by type (spelling, grammar, punctuation, consistency, repetition)
-- Provide specific correction suggestions for each error found
-- Count and list repeated words/phrases with their frequency
-- Check for consistency in character names, dates, and story details
-- Look for formatting inconsistencies (quotation marks, italics, etc.)
-- Be particularly harsh about basic errors - these are unacceptable in professional writing
+         **SPECIAL INSTRUCTIONS FOR LINE EDITING:**
+         - When performing line editing analysis, be extremely thorough and detail-oriented
+         - Quote specific passages with exact line references when possible
+         - Categorize errors by type (spelling, grammar, punctuation, consistency, repetition)
+         - Provide specific correction suggestions for each error found
+         - Count and list repeated words/phrases with their frequency
+         - Check for consistency in character names, dates, and story details
+         - Look for formatting inconsistencies (quotation marks, italics, etc.)
+         - Be particularly harsh about basic errors - these are unacceptable in professional writing
+         
+         **CRITICAL: ALWAYS COMPLETE YOUR RESPONSES**
+         - Never leave responses incomplete or cut off mid-sentence
+         - If you're running out of space, prioritize the most important points
+         - Always end with a proper conclusion or summary
+         - Use concise but complete analysis rather than incomplete detailed analysis
 
 **EDITORIAL PERSONA:**
 - Write with the exasperated tone of a veteran editor who's seen every mistake in the book and is tired of explaining them

@@ -96,11 +96,12 @@
             padding: 5px 10px;
             border-radius: 15px;
             font-size: 12px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .response:hover .scroll-indicator {
             opacity: 1;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .scroll-indicator.hidden {
+            opacity: 0;
         }
         .response h1, .response h2, .response h3, .response h4, .response h5, .response h6 {
             color: #333;
@@ -400,6 +401,14 @@
                 
                 // Auto-scroll to top
                 this.responseDiv.scrollTop = 0;
+                
+                // Add scroll event listener to hide indicator when scrolling
+                this.responseDiv.addEventListener('scroll', () => {
+                    const indicator = this.responseDiv.querySelector('.scroll-indicator');
+                    if (indicator && this.responseDiv.scrollTop > 10) {
+                        indicator.classList.add('hidden');
+                    }
+                });
             }
             
             showError(message) {
