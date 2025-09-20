@@ -58,15 +58,57 @@ class MultiBookRAG:
         self.book_analyses = {}
         self.combined_analysis = None
         
+        # Initialize conversation memory
+        self.conversation_history = []
+        self.max_history_length = 10  # Keep last 10 exchanges
+        
         print(f"🔧 Multi-Book RAG Configuration:")
         print(f"   Model: {self.model}")
         print(f"   Max Tokens: {self.max_tokens}")
         print(f"   Temperature: {self.temperature}")
         print(f"   Force JSON: {self.force_json}")
+        print(f"   Conversation Memory: Enabled (max {self.max_history_length} exchanges)")
     
     def get_available_books(self) -> List[Dict[str, Any]]:
         """Get list of available books"""
         return self.book_analyzer.get_available_books()
+    
+    def add_to_conversation_history(self, question: str, answer: str, book_context: str = ""):
+        """Add a question-answer pair to conversation history"""
+        # Create a summary of the exchange
+        summary = {
+            "question": question[:200] + "..." if len(question) > 200 else question,
+            "answer_summary": answer[:300] + "..." if len(answer) > 300 else answer,
+            "book_context": book_context,
+            "timestamp": time.time()
+        }
+        
+        self.conversation_history.append(summary)
+        
+        # Keep only the most recent exchanges
+        if len(self.conversation_history) > self.max_history_length:
+            self.conversation_history = self.conversation_history[-self.max_history_length:]
+    
+    def get_conversation_context(self) -> str:
+        """Get formatted conversation history for context"""
+        if not self.conversation_history:
+            return ""
+        
+        context = "\n\n**PREVIOUS CONVERSATION CONTEXT:**\n"
+        for i, exchange in enumerate(self.conversation_history[-5:], 1):  # Last 5 exchanges
+            context += f"{i}. Q: {exchange['question']}\n"
+            context += f"   A: {exchange['answer_summary']}\n"
+            if exchange['book_context']:
+                context += f"   (Book: {exchange['book_context']})\n"
+            context += "\n"
+        
+        context += "**END OF CONVERSATION CONTEXT**\n"
+        return context
+    
+    def clear_conversation_history(self):
+        """Clear conversation history"""
+        self.conversation_history = []
+        print("🧹 Conversation history cleared")
     
     def initialize_book_knowledge(self, book_ids: Optional[List[str]] = None, force_refresh: bool = False):
         """
@@ -288,7 +330,10 @@ class MultiBookRAG:
                         book_names.append(book_title)
                 book_context = f" You are specifically analyzing: {', '.join(book_names)}."
             
-            system_prompt = f"""You are Max, Jessica's Crabby Editor, a seasoned literary editor with 30+ years of experience who has seen it all and has little patience for nonsense. You're known for your sharp wit, direct feedback, and intolerance of literary mediocrity. While you provide comprehensive analysis, you do so with the slightly crabby demeanor of an editor who's tired of explaining the basics to writers who should know better.{book_context}
+            # Get conversation context
+            conversation_context = self.get_conversation_context()
+            
+            system_prompt = f"""You are Max, Jessica's Crabby Editor, a seasoned literary editor with 30+ years of experience who has seen it all and has little patience for nonsense. You're known for your sharp wit, direct feedback, and intolerance of literary mediocrity. While you provide comprehensive analysis, you do so with the slightly crabby demeanor of an editor who's tired of explaining the basics to writers who should know better.{book_context}{conversation_context}
 
 You have access to:
 1. A detailed analysis of the books including plot, characters, themes, and conflicts
@@ -467,6 +512,10 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
         
         # Generate response
         answer = self.generate_response(question, context, book_knowledge, book_ids)
+        
+        # Add to conversation history
+        book_context_str = ', '.join([book['book_title'] for book in available_books if book['book_id'] in book_ids]) if book_ids else "All Books"
+        self.add_to_conversation_history(question, answer, book_context_str)
         
         return {
             'answer': answer,

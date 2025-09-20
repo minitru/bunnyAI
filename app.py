@@ -151,13 +151,30 @@ def get_status():
             'books_loaded': len(books),
             'total_chunks': sum(book['chunk_count'] for book in books),
             'system_ready': True,
-            'available_books': [book['book_title'] for book in books]
+            'available_books': [book['book_title'] for book in books],
+            'conversation_history_length': len(rag.conversation_history)
         })
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e),
             'system_ready': False
+        }), 500
+
+@app.route('/api/clear-memory', methods=['POST'])
+def clear_conversation_memory():
+    """Clear conversation history"""
+    try:
+        rag = get_rag_instance()
+        rag.clear_conversation_history()
+        return jsonify({
+            'success': True,
+            'message': 'Conversation history cleared'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 if __name__ == '__main__':

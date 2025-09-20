@@ -61,6 +61,24 @@
             background: #ccc;
             cursor: not-allowed;
         }
+        .clear-memory-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .clear-memory-btn:hover {
+            background: #5a6268;
+        }
+        .clear-memory-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
         .response {
             margin-top: 20px;
             padding: 20px;
@@ -256,6 +274,7 @@
             ></textarea>
             <div class="clearfix">
                 <button id="submit-btn" class="submit-btn">What is it now?</button>
+                <button id="clear-memory-btn" class="clear-memory-btn">Clear Memory</button>
             </div>
         </div>
         
@@ -325,12 +344,14 @@
                 this.submitBtn = document.getElementById('submit-btn');
                 this.responseDiv = document.getElementById('response');
                 this.bookChoice = document.getElementById('book-choice');
+                this.clearMemoryBtn = document.getElementById('clear-memory-btn');
                 
                 this.setupEventListeners();
             }
             
             setupEventListeners() {
                 this.submitBtn.addEventListener('click', () => this.submitQuery());
+                this.clearMemoryBtn.addEventListener('click', () => this.clearMemory());
                 
                 this.questionInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -415,6 +436,33 @@
                 this.responseDiv.textContent = message;
                 this.responseDiv.className = 'response error';
                 this.responseDiv.style.display = 'block';
+            }
+            
+            async clearMemory() {
+                try {
+                    this.clearMemoryBtn.disabled = true;
+                    this.clearMemoryBtn.textContent = 'Clearing...';
+                    
+                    const response = await fetch('/api/clear-memory', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showResponse('🧹 Conversation memory cleared. Max will no longer remember previous exchanges.');
+                    } else {
+                        this.showError('Failed to clear memory: ' + data.error);
+                    }
+                } catch (error) {
+                    this.showError('Error clearing memory: ' + error.message);
+                } finally {
+                    this.clearMemoryBtn.disabled = false;
+                    this.clearMemoryBtn.textContent = 'Clear Memory';
+                }
             }
             
             hideResponse() {
