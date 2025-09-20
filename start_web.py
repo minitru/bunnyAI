@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""
+Simple startup script for the web application
+"""
+
+import os
+import sys
+import subprocess
+import time
+
+def start_web_app():
+    """Start the web application"""
+    print("🚀 Starting Multi-Book RAG Web Application...")
+    print("=" * 50)
+    
+    # Check if .env file exists
+    if not os.path.exists('.env'):
+        print("❌ .env file not found!")
+        print("💡 Please copy .env.example to .env and fill in your API keys:")
+        print("   cp .env.example .env")
+        print("   nano .env")
+        return False
+    
+    # Check if virtual environment is activated
+    if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+        print("❌ Virtual environment not activated!")
+        print("💡 Please activate the virtual environment:")
+        print("   source venv/bin/activate")
+        return False
+    
+    print("✅ Environment checks passed")
+    print("🌐 Starting web server on http://localhost:7777")
+    print("📚 The system will initialize book knowledge on first startup...")
+    print("⏳ This may take a few moments...")
+    print()
+    print("🎯 Once started, open your browser and go to:")
+    print("   http://localhost:7777")
+    print()
+    print("🛑 Press Ctrl+C to stop the server")
+    print("=" * 50)
+    
+    try:
+        # Start the Flask app
+        from app import app
+        app.run(debug=False, host='127.0.0.1', port=7777)
+    except KeyboardInterrupt:
+        print("\n👋 Server stopped by user")
+    except Exception as e:
+        print(f"\n❌ Error starting server: {e}")
+        return False
+    
+    return True
+
+if __name__ == "__main__":
+    success = start_web_app()
+    sys.exit(0 if success else 1)

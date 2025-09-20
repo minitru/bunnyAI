@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Book Literary Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-book-open me-2"></i>
+                    Multi-Book Literary Analysis
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <span class="navbar-text" id="status-indicator">
+                        <i class="fas fa-circle text-warning me-1"></i>
+                        Loading...
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row">
+                <!-- Left Sidebar - Book Selection -->
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-books me-2"></i>Available Books</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="books-list">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading books...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6><i class="fas fa-info-circle me-2"></i>System Status</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="system-status">
+                                <div class="text-center">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Area -->
+                <div class="col-md-9">
+                    <!-- Query Input -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-search me-2"></i>Ask a Question</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="query-form">
+                                <div class="mb-3">
+                                    <label for="question" class="form-label">Your Question</label>
+                                    <textarea 
+                                        class="form-control" 
+                                        id="question" 
+                                        rows="3" 
+                                        placeholder="Ask about characters, themes, plot, or compare the books..."
+                                        required
+                                    ></textarea>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="n-results" class="form-label">Context Chunks</label>
+                                        <select class="form-select" id="n-results">
+                                            <option value="40">40 chunks (fast)</option>
+                                            <option value="80" selected>80 chunks (recommended)</option>
+                                            <option value="120">120 chunks (comprehensive)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" id="use-book-knowledge" checked>
+                                            <label class="form-check-label" for="use-book-knowledge">
+                                                Use Book Knowledge
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" id="submit-btn">
+                                    <i class="fas fa-paper-plane me-2"></i>Ask Question
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Results Area -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-lightbulb me-2"></i>Analysis Results</h5>
+                            <div id="query-stats" class="text-muted small" style="display: none;">
+                                <span id="processing-time"></span> | 
+                                <span id="context-length"></span> | 
+                                <span id="books-searched"></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="results-area">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-comments fa-3x mb-3"></i>
+                                    <p>Ask a question to get started with literary analysis</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>Analyzing your question...</h5>
+                    <p class="text-muted">This may take a few moments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
