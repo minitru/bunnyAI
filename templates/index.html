@@ -3,201 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Book Literary Analysis</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <title>Bunny AI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 2rem;
+        }
+        .query-box {
+            margin-bottom: 20px;
+        }
+        .query-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 100px;
+            box-sizing: border-box;
+        }
+        .query-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .submit-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            float: right;
+        }
+        .submit-btn:hover {
+            background: #0056b3;
+        }
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+    </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <!-- Header -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-            <div class="container">
-                <a class="navbar-brand" href="#">
-                    <i class="fas fa-book-open me-2"></i>
-                    Multi-Book Literary Analysis
-                </a>
-                <div class="navbar-nav ms-auto">
-                    <span class="navbar-text" id="status-indicator">
-                        <i class="fas fa-circle text-warning me-1"></i>
-                        Loading...
-                    </span>
-                </div>
-            </div>
-        </nav>
-
-        <div class="container">
-            <div class="row">
-                <!-- Left Sidebar - Book Selection -->
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5><i class="fas fa-books me-2"></i>Book Search</h5>
-                        </div>
-                        <div class="card-body">
-                            <!-- Search Input -->
-                            <div class="mb-3">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="fas fa-search"></i>
-                                    </span>
-                                    <input type="text" class="form-control" id="book-search" placeholder="Search books...">
-                                </div>
-                            </div>
-                            
-                            <!-- Filter Options -->
-                            <div class="mb-3">
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <button class="btn btn-sm btn-outline-primary filter-btn active" data-filter="all">
-                                        All
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="selected">
-                                        Selected
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-info filter-btn" data-filter="recent">
-                                        Recent
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Book Count -->
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <span id="book-count">0</span> books available
-                                </small>
-                            </div>
-                            
-                            <!-- Books List -->
-                            <div id="books-list" class="books-container">
-                                <div class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                    <p class="mt-2">Loading books...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- System Status -->
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6><i class="fas fa-info-circle me-2"></i>System Status</h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="system-status">
-                                <div class="text-center">
-                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Main Content Area -->
-                <div class="col-md-9">
-                    <!-- Query Input -->
-                    <div class="card mb-4">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5><i class="fas fa-search me-2"></i>Ask a Question</h5>
-                            <div class="selected-books-indicator">
-                                <small class="text-muted">
-                                    <span id="selected-count">All books</span> selected
-                                </small>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <form id="query-form">
-                                <div class="mb-3">
-                                    <label for="question" class="form-label">Your Question</label>
-                                    <textarea 
-                                        class="form-control" 
-                                        id="question" 
-                                        rows="3" 
-                                        placeholder="Ask about characters, themes, plot, or compare the books..."
-                                        required
-                                    ></textarea>
-                                    <div class="form-text">
-                                        <i class="fas fa-lightbulb me-1"></i>
-                                        Try questions like: "What are the main themes?", "Compare the protagonists", "How do the stories end?"
-                                    </div>
-                                </div>
-                                
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="n-results" class="form-label">Context Chunks</label>
-                                        <select class="form-select" id="n-results">
-                                            <option value="40">40 chunks (fast)</option>
-                                            <option value="80" selected>80 chunks (recommended)</option>
-                                            <option value="120">120 chunks (comprehensive)</option>
-                                        </select>
-                                        <div class="form-text">More chunks = more detailed analysis</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check mt-4">
-                                            <input class="form-check-input" type="checkbox" id="use-book-knowledge" checked>
-                                            <label class="form-check-label" for="use-book-knowledge">
-                                                Use Book Knowledge
-                                            </label>
-                                            <div class="form-text">Enable AI book knowledge for better analysis</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-primary" id="submit-btn">
-                                        <i class="fas fa-paper-plane me-2"></i>Ask Question
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary" id="clear-btn">
-                                        <i class="fas fa-eraser me-2"></i>Clear
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Results Area -->
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5><i class="fas fa-lightbulb me-2"></i>Analysis Results</h5>
-                            <div id="query-stats" class="text-muted small" style="display: none;">
-                                <span id="processing-time"></span> | 
-                                <span id="context-length"></span> | 
-                                <span id="books-searched"></span>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="results-area">
-                                <div class="text-center text-muted">
-                                    <i class="fas fa-comments fa-3x mb-3"></i>
-                                    <p>Ask a question to get started with literary analysis</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="container">
+        <div class="header">
+            <h1>🐰 Bunny AI</h1>
+        </div>
+        
+        <div class="query-box">
+            <textarea 
+                id="question" 
+                class="query-input" 
+                placeholder="Ask me anything about the books..."
+                rows="4"
+            ></textarea>
+            <div class="clearfix">
+                <button id="submit-btn" class="submit-btn">Ask</button>
             </div>
         </div>
+        
+        <div id="response" class="response" style="display: none;"></div>
     </div>
 
-    <!-- Loading Modal -->
-    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center">
-                    <div class="spinner-border text-primary mb-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h5>Analyzing your question...</h5>
-                    <p class="text-muted">This may take a few moments</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        class BunnyAI {
+            constructor() {
+                this.questionInput = document.getElementById('question');
+                this.submitBtn = document.getElementById('submit-btn');
+                this.responseDiv = document.getElementById('response');
+                
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                this.submitBtn.addEventListener('click', () => this.submitQuery());
+                
+                this.questionInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.submitQuery();
+                    }
+                });
+            }
+            
+            async submitQuery() {
+                const question = this.questionInput.value.trim();
+                
+                if (!question) {
+                    this.showError('Please enter a question');
+                    return;
+                }
+                
+                this.setLoading(true);
+                this.hideResponse();
+                
+                try {
+                    const response = await fetch('/api/query', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ question })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showResponse(data.answer);
+                    } else {
+                        this.showError('Query failed: ' + data.error);
+                    }
+                } catch (error) {
+                    this.showError('Failed to submit query: ' + error.message);
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+            
+            setLoading(loading) {
+                this.submitBtn.disabled = loading;
+                this.submitBtn.textContent = loading ? 'Thinking...' : 'Ask';
+            }
+            
+            showResponse(answer) {
+                this.responseDiv.textContent = answer;
+                this.responseDiv.className = 'response';
+                this.responseDiv.style.display = 'block';
+            }
+            
+            showError(message) {
+                this.responseDiv.textContent = message;
+                this.responseDiv.className = 'response error';
+                this.responseDiv.style.display = 'block';
+            }
+            
+            hideResponse() {
+                this.responseDiv.style.display = 'none';
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BunnyAI();
+        });
+    </script>
 </body>
 </html>
