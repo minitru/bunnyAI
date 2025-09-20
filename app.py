@@ -131,6 +131,7 @@ def query_books():
             'answer': result['answer'],
             'books_searched': result['books_searched'],
             'context_length': result['context_length'],
+            'chunks_used': result['chunks_used'],
             'processing_time': round(processing_time, 2)
         })
         
