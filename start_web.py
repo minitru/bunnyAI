@@ -42,7 +42,7 @@ def start_web_app():
     try:
         # Start the Flask app
         from app import app
-        app.run(debug=False, host='127.0.0.1', port=7777)
+        app.run(debug=False, host='0.0.0.0', port=7777)
     except KeyboardInterrupt:
         print("\n👋 Server stopped by user")
     except Exception as e:
