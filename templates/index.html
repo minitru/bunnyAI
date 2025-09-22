@@ -261,8 +261,7 @@
                 <label for="book-choice" class="form-label">Select Book:</label>
                 <select id="book-choice" class="form-select">
                     <option value="all">All Books</option>
-                    <option value="nonamekey">No Name Key</option>
-                    <option value="sidetrackkey">Sidetrack Key</option>
+                    <!-- Books will be loaded dynamically -->
                 </select>
             </div>
             
@@ -347,6 +346,31 @@
                 this.clearMemoryBtn = document.getElementById('clear-memory-btn');
                 
                 this.setupEventListeners();
+                this.loadBooks();
+            }
+            
+            async loadBooks() {
+                try {
+                    const response = await fetch('/api/books');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Clear existing options except "All Books"
+                        this.bookChoice.innerHTML = '<option value="all">All Books</option>';
+                        
+                        // Add each book as an option
+                        data.books.forEach(book => {
+                            const option = document.createElement('option');
+                            option.value = book.book_id;
+                            option.textContent = book.book_title;
+                            this.bookChoice.appendChild(option);
+                        });
+                    } else {
+                        console.error('Failed to load books:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading books:', error);
+                }
             }
             
             setupEventListeners() {
