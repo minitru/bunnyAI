@@ -5,7 +5,7 @@ Main Entry Point for Multi-Book Enhanced RAG System
 
 import os
 import sys
-from setup_openrouter import setup_openrouter_env
+from dotenv import load_dotenv
 from multi_book_rag import MultiBookRAG
 
 def main():
@@ -13,8 +13,8 @@ def main():
     print("🎯 Multi-Book Enhanced RAG System - Literary Analysis")
     print("="*60)
     
-    # Setup environment
-    setup_openrouter_env()
+    # Load environment variables from .env file
+    load_dotenv()
     
     # Initialize RAG system
     print("🚀 Initializing Multi-Book Enhanced RAG System...")

@@ -80,7 +80,7 @@ class MultiBookAnalyzer:
                 book_ids.add(metadata.get('book_id', 'unknown'))
             
             # Also check for known book IDs that might not be in the sample
-            known_book_ids = ['sidetrackkey', 'nonamekey']
+            known_book_ids = ['sidetrackkey', 'nonamekey', 'wanda & me - act 1']
             for book_id in known_book_ids:
                 try:
                     # Check if this book exists

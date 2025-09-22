@@ -4,7 +4,6 @@ Quick Model Changer
 """
 
 import os
-from setup_openrouter import setup_openrouter_env
 
 def change_model(new_model: str):
     """

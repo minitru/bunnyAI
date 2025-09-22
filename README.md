@@ -52,20 +52,12 @@ python main_multi_book.py
 - **`main_multi_book.py`** - Command-line interface for multi-book system
 - **`multi_book_rag.py`** - Multi-book RAG system with comprehensive context
 - **`multi_book_analyzer.py`** - Multi-book analysis with caching
-- **`setup_openrouter.py`** - OpenRouter configuration
+- **`test_web.py`** - Web API test suite
 
 ### Utils Directory (`utils/`)
-- **`enhanced_rag.py`** - Single-book enhanced RAG system
-- **`book_analyzer.py`** - Single-book analysis with caching
 - **`upload_multi_book.py`** - Multi-book data upload script
 - **`cost_calculator.py`** - Query cost calculation tool
-- **`cache_manager.py`** - Cache management utility
-- **`model_selector.py`** - Model comparison and selection tool
 - **`change_model.py`** - Quick model switcher
-- **`upload_to_chroma.py`** - Legacy single-book upload script
-- **`test_enhanced_rag.py`** - Test the enhanced RAG system
-- **`test_caching.py`** - Test caching functionality
-- **`component_analysis.md`** - System component documentation
 
 ## 🎯 Features
 
@@ -181,10 +173,10 @@ python main_multi_book.py
 
 ### Programmatic Usage
 ```python
-from setup_openrouter import setup_openrouter_env
+from dotenv import load_dotenv
 from multi_book_rag import MultiBookRAG
 
-setup_openrouter_env()
+load_dotenv()
 rag = MultiBookRAG()
 rag.initialize_book_knowledge()
 
@@ -202,18 +194,13 @@ print(result['answer'])
 python utils/cost_calculator.py
 
 # Model selection
-python utils/model_selector.py
 python utils/change_model.py
-
-# Cache management
-python utils/cache_manager.py
 
 # Upload books
 python utils/upload_multi_book.py
 
-# Test systems
-python utils/test_enhanced_rag.py
-python utils/test_caching.py
+# Test web API
+python test_web.py
 ```
 
 ## 🧹 Cleanup
@@ -225,11 +212,24 @@ All old/outdated RAG system files have been removed:
 - ❌ `test_rag.py` (old version)
 - ❌ `test_openrouter.py` (old version)
 - ❌ `engine_comparison.py` (old version)
+- ❌ `utils/enhanced_rag.py` (single-book system)
+- ❌ `utils/book_analyzer.py` (single-book analyzer)
+- ❌ `utils/upload_to_chroma.py` (legacy upload script)
+- ❌ `utils/test_enhanced_rag.py` (broken test file)
+- ❌ `utils/test_caching.py` (broken test file)
+- ❌ `utils/cache_manager.py` (single-book cache manager)
+- ❌ `utils/model_selector.py` (single-book model selector)
+- ❌ `utils/component_analysis.md` (outdated documentation)
+- ❌ `setup_openrouter.py` (replaced with direct .env loading)
+- ❌ `test_tokens.py` (outdated test script)
+- ❌ `bunny-ai-plugin.php` (WordPress plugin)
+- ❌ `wordpress-shortcode.php` (WordPress shortcode)
+- ❌ `WORDPRESS_INTEGRATION.md` (WordPress documentation)
 
 ## 📈 System Status
 
 ✅ **REST API** (Flask, clean endpoints, JSON format)  
-✅ **Multi-book support** (Sidetrack Key + No Name Key)  
+✅ **Multi-book support** (Sidetrack Key + No Name Key + Wanda & Me - Act 1)  
 ✅ **Enhanced context retrieval** (80 chunks, 40k+ chars)  
 ✅ **Comprehensive book analysis** (200+ chunks, 10 sections)  
 ✅ **Claude 3.5 Sonnet** (best for literary analysis)  

@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import os
 import time
-from setup_openrouter import setup_openrouter_env
+from dotenv import load_dotenv
 from multi_book_rag import MultiBookRAG
 
 app = Flask(__name__)
@@ -21,7 +21,7 @@ def get_rag_instance():
     """Get or create the RAG instance"""
     global rag_instance
     if rag_instance is None:
-        setup_openrouter_env()
+        load_dotenv()
         rag_instance = MultiBookRAG()
         rag_instance.initialize_book_knowledge()
     return rag_instance

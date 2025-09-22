@@ -14,12 +14,25 @@ import json
 
 class MultiBookUploader:
     def __init__(self):
-        """Initialize ChromaDB Cloud client"""
-        self.client = chromadb.CloudClient(
-            api_key=os.getenv('CHROMADB_API_KEY'),
-            tenant=os.getenv('CHROMADB_TENANT'),
-            database=os.getenv('CHROMADB_DATABASE')
-        )
+        """Initialize ChromaDB client (cloud or local)"""
+        chromadb_api_key = os.getenv('CHROMADB_API_KEY')
+        if chromadb_api_key and chromadb_api_key.strip():
+            try:
+                # Use cloud client if API key is provided
+                self.client = chromadb.CloudClient(
+                    api_key=chromadb_api_key,
+                    tenant=os.getenv('CHROMADB_TENANT'),
+                    database=os.getenv('CHROMADB_DATABASE')
+                )
+                print("✅ Connected to ChromaDB Cloud")
+            except Exception as e:
+                print(f"⚠️ Cloud connection failed: {e}")
+                print("🔄 Falling back to local ChromaDB")
+                self.client = chromadb.Client()
+        else:
+            # Use local client if no API key
+            print("🔄 Using local ChromaDB")
+            self.client = chromadb.Client()
         
     def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
         """
@@ -87,7 +100,9 @@ class MultiBookUploader:
             'sidetrackkey': 'Sidetrack Key',
             'nonamekey': 'No Name Key',
             'sidetrack_key': 'Sidetrack Key',
-            'no_name_key': 'No Name Key'
+            'no_name_key': 'No Name Key',
+            'wanda & me - act 1': 'Wanda & Me - Act 1',
+            'wanda_and_me_act_1': 'Wanda & Me - Act 1'
         }
         
         book_title = book_mapping.get(filename, filename.replace('_', ' ').title())
