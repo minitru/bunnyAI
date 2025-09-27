@@ -206,7 +206,7 @@
             margin-bottom: 15px;
         }
         
-        .book-selector, .model-selector {
+        .book-selector, .model-selector, .template-selector {
             flex: 1;
         }
         .form-label {
@@ -279,7 +279,7 @@
                 <div class="book-selector">
                     <label for="book-choice" class="form-label">Select Book:</label>
                     <select id="book-choice" class="form-select">
-                        <option value="all">All Books</option>
+                        <option value="">Loading books...</option>
                         <!-- Books will be loaded dynamically -->
                     </select>
                 </div>
@@ -293,6 +293,19 @@
                         <option value="openai/gpt-4o">GPT-4o (Advanced Analysis)</option>
                     </select>
                 </div>
+                
+                <div class="template-selector">
+                    <label for="template-choice" class="form-label">Quick Templates:</label>
+                    <select id="template-choice" class="form-select">
+                        <option value="">Choose a template...</option>
+                        <option value="full-analysis">📊 Full Literary Analysis</option>
+                        <option value="writing-style">✍️ Writing Style & Structure</option>
+                        <option value="content-review">🔍 Content Review & Language</option>
+                        <option value="plot-analysis">📖 Plot & Story Analysis</option>
+                        <option value="character-themes">👥 Character & Themes</option>
+                        <option value="line-editing">📝 Line Editing & Grammar</option>
+                    </select>
+                </div>
             </div>
             
             <textarea 
@@ -301,23 +314,13 @@
                 placeholder="Ask for comprehensive literary analysis, including:&#10;• Dialogue vs. narrative analysis&#10;• Sentence structure & readability&#10;• Language & content analysis&#10;• Plot & character development&#10;• Theme & pacing analysis&#10;• Writing quality assessment&#10;• Line editing (spelling, grammar, punctuation)&#10;&#10;Or ask any specific question about the books...&#10;&#10;Note: I'm a veteran editor with little patience for mediocrity.&#10;Bring your A-game or expect some sharp feedback."
                 rows="6"
             ></textarea>
+            
             <div class="clearfix">
                 <button id="submit-btn" class="submit-btn">What is it now?</button>
                 <button id="clear-memory-btn" class="clear-memory-btn">Clear Memory</button>
             </div>
         </div>
         
-        <div class="quick-actions">
-            <h3>Quick Analysis Options:</h3>
-            <div class="action-buttons">
-                <button class="action-btn" data-query="Provide a comprehensive literary analysis including dialogue vs. narrative usage, sentence stats, language analysis, plot structure, character development, themes, and writing quality assessment. Be thorough and don't hold back on criticism.">Full Analysis</button>
-                <button class="action-btn" data-query="Analyze the dialogue vs. narrative balance and sentence structure with readability scores. Point out any writing weaknesses.">Writing Style</button>
-                <button class="action-btn" data-query="Find explicit language, cliches, repetitive phrases, and misspellings. Call out any lazy writing.">Content Review</button>
-                <button class="action-btn" data-query="Analyze plot structure, narrative arc, pacing, and story elements. Be honest about what works and what doesn't.">Plot Analysis</button>
-                <button class="action-btn" data-query="Analyze character development, conflicts, themes, and provide key recommendations. Don't sugarcoat the problems.">Character & Themes</button>
-                <button class="action-btn" data-query="Perform line editing analysis: check for spelling errors, punctuation mistakes, grammar issues, consistency problems, and repeated words. Be thorough and point out every error you find.">Line Editing</button>
-            </div>
-        </div>
         
         <div class="quick-actions">
             <h3>🕸️ Knowledge Graph Visualization:</h3>
@@ -387,7 +390,18 @@
                 this.responseDiv = document.getElementById('response');
                 this.bookChoice = document.getElementById('book-choice');
                 this.modelChoice = document.getElementById('model-choice');
+                this.templateChoice = document.getElementById('template-choice');
                 this.clearMemoryBtn = document.getElementById('clear-memory-btn');
+                
+                // Template queries mapping
+                this.templateQueries = {
+                    'full-analysis': 'Provide a comprehensive literary analysis including dialogue vs. narrative usage, sentence stats, language analysis, plot structure, character development, themes, and writing quality assessment. Be thorough and don\'t hold back on criticism.',
+                    'writing-style': 'Analyze the dialogue vs. narrative balance and sentence structure with readability scores. Point out any writing weaknesses.',
+                    'content-review': 'Find explicit language, cliches, repetitive phrases, and misspellings. Call out any lazy writing.',
+                    'plot-analysis': 'Analyze plot structure, narrative arc, pacing, and story elements. Be honest about what works and what doesn\'t.',
+                    'character-themes': 'Analyze character development, conflicts, themes, and provide key recommendations. Don\'t sugarcoat the problems.',
+                    'line-editing': 'Perform line editing analysis: check for spelling errors, punctuation mistakes, grammar issues, consistency problems, and repeated words. Be thorough and point out every error you find.'
+                };
                 
                 this.setupEventListeners();
                 this.loadBooks();
@@ -399,8 +413,8 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        // Clear existing options except "All Books"
-                        this.bookChoice.innerHTML = '<option value="all">All Books</option>';
+                        // Clear existing options
+                        this.bookChoice.innerHTML = '';
                         
                         // Add each book as an option
                         data.books.forEach(book => {
@@ -409,6 +423,17 @@
                             option.textContent = book.book_title;
                             this.bookChoice.appendChild(option);
                         });
+                        
+                        // Add "All Books" option at the end
+                        const allBooksOption = document.createElement('option');
+                        allBooksOption.value = 'all';
+                        allBooksOption.textContent = 'All Books';
+                        this.bookChoice.appendChild(allBooksOption);
+                        
+                        // Default to the first book (single book selection)
+                        if (data.books.length > 0) {
+                            this.bookChoice.value = data.books[0].book_id;
+                        }
                     } else {
                         console.error('Failed to load books:', data.error);
                     }
@@ -428,13 +453,14 @@
                     }
                 });
                 
-                // Quick action buttons
-                document.querySelectorAll('.action-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const query = btn.getAttribute('data-query');
-                        this.questionInput.value = query;
-                        this.submitQuery();
-                    });
+                // Template dropdown
+                this.templateChoice.addEventListener('change', (e) => {
+                    const selectedTemplate = e.target.value;
+                    if (selectedTemplate && this.templateQueries[selectedTemplate]) {
+                        this.questionInput.value = this.templateQueries[selectedTemplate];
+                        // Reset the dropdown to show it was used
+                        e.target.value = '';
+                    }
                 });
             }
             
