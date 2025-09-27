@@ -230,22 +230,6 @@ def get_force_graph(book_id):
             'error': str(e)
         }), 500
 
-@app.route('/api/force-graph/combined', methods=['GET'])
-def get_combined_force_graph():
-    """Get combined force graph data for all books"""
-    try:
-        rag = get_rag_instance()
-        force_graph_data = rag.get_combined_force_graph_data()
-        
-        return jsonify({
-            'success': True,
-            'force_graph': force_graph_data
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
 @app.route('/api/entities/search', methods=['POST'])
 def search_entities():

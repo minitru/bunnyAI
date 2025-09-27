@@ -467,79 +467,11 @@ Provide a detailed analysis of the plot structure, conflicts, and themes."""
                 'analysis': analysis
             }
         
-        # Create combined analysis
-        print(f"\n🔗 Creating combined analysis...")
-        combined_analysis = self.create_combined_analysis(all_analyses)
-        all_analyses['_combined'] = combined_analysis
+        # Skip combined analysis for faster startup
+        print(f"\n✅ Individual book analyses complete!")
         
         return all_analyses
     
-    def create_combined_analysis(self, all_analyses: Dict[str, Any]) -> Dict[str, str]:
-        """Create a combined analysis of all books"""
-        # Extract summaries from all books
-        summaries = []
-        for book_id, data in all_analyses.items():
-            if book_id == '_combined':
-                continue
-            book_info = data['book_info']
-            analysis = data['analysis']
-            summary = analysis.get('book_summary', '')
-            summaries.append(f"=== {book_info['book_title']} ===\n{summary}\n")
-        
-        combined_context = "\n".join(summaries)
-        
-        combined_prompt = f"""Based on the following comprehensive analyses of multiple books, create a combined literary analysis that includes:
-
-1. **Comparative Analysis**: 
-   - Similarities and differences between the books
-   - Common themes and motifs
-   - Contrasting approaches to similar subjects
-
-2. **Character Comparisons**: 
-   - Similar character types across books
-   - Different approaches to character development
-   - Relationships and dynamics
-
-3. **Thematic Connections**: 
-   - Shared themes and how they're expressed differently
-   - Unique themes in each book
-   - Overall message or worldview
-
-4. **Literary Techniques**: 
-   - Similar or different writing styles
-   - Narrative techniques used
-   - Literary devices and their effectiveness
-
-5. **Overall Assessment**: 
-   - Strengths and weaknesses of each book
-   - How the books complement each other
-   - Recommendations for readers
-
-Book Analyses:
-{combined_context}
-
-Provide a comprehensive comparative analysis that highlights both the individual strengths of each book and their collective significance."""
-
-        try:
-            messages = [
-                {"role": "system", "content": "You are a literary critic providing comparative analysis of multiple books. Be thorough and insightful."},
-                {"role": "user", "content": combined_prompt}
-            ]
-            
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=self.max_tokens,
-                temperature=self.temperature
-            )
-            
-            return {
-                'combined_analysis': response.choices[0].message.content,
-                'books_analyzed': len(all_analyses) - 1  # Exclude _combined
-            }
-            
-        except Exception as e:
-            return {'error': f'Error creating combined analysis: {e}'}
     
     def is_cache_valid(self, metadata: Dict[str, Any]) -> bool:
         """Check if cache is still valid"""
@@ -635,14 +567,6 @@ Provide a comprehensive comparative analysis that highlights both the individual
         """
         return self.knowledge_graph.get_force_graph_data(book_id)
     
-    def get_combined_force_graph_data(self) -> Dict[str, Any]:
-        """
-        Get combined force graph data for all books
-        
-        Returns:
-            Combined force graph data in D3.js format
-        """
-        return self.knowledge_graph.get_combined_force_graph_data()
     
     def search_entities(self, query: str, book_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """

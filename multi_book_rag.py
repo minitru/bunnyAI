@@ -538,9 +538,6 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
         """Get force graph data for visualization"""
         return self.book_analyzer.get_force_graph_data(book_id)
     
-    def get_combined_force_graph_data(self) -> Dict[str, Any]:
-        """Get combined force graph data for all books"""
-        return self.book_analyzer.get_combined_force_graph_data()
     
     def search_entities(self, query: str, book_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """Search for entities in the knowledge graph"""

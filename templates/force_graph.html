@@ -138,7 +138,6 @@
             </select>
             
             <button id="loadGraph" onclick="loadForceGraph()" disabled>Load Graph</button>
-            <button id="loadCombined" onclick="loadCombinedGraph()">Load All Books</button>
             <button id="refreshGraph" onclick="refreshKnowledgeGraph()" disabled>Refresh KG</button>
             <button id="resetView" onclick="resetView()">Reset View</button>
         </div>
@@ -234,26 +233,6 @@
             }
         }
         
-        // Load combined force graph for all books
-        async function loadCombinedGraph() {
-            showLoading();
-            
-            try {
-                const response = await fetch('/api/force-graph/combined');
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentData = data.force_graph;
-                    renderGraph(currentData);
-                    showInfo(currentData);
-                } else {
-                    showError(data.error || 'Failed to load combined force graph');
-                }
-            } catch (error) {
-                console.error('Error loading combined force graph:', error);
-                showError('Error loading combined force graph: ' + error.message);
-            }
-        }
         
         // Render the force graph
         function renderGraph(data) {
