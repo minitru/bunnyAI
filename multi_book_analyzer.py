@@ -709,8 +709,32 @@ Return ONLY the JSON, no other text."""
             if content.endswith('```'):
                 content = content[:-3]
             
-            # Parse JSON
-            entities_data = json.loads(content)
+            # Additional JSON cleaning
+            content = content.strip()
+            
+            # Try to find the JSON part if there's extra text
+            if '{' in content and '}' in content:
+                start_idx = content.find('{')
+                end_idx = content.rfind('}') + 1
+                content = content[start_idx:end_idx]
+            
+            # Parse JSON with better error handling
+            try:
+                entities_data = json.loads(content)
+            except json.JSONDecodeError as e:
+                print(f"   ❌ JSON parsing error: {e}")
+                print(f"   📝 Content preview: {content[:500]}...")
+                
+                # Try to fix common JSON issues
+                try:
+                    # Remove any trailing commas before closing braces/brackets
+                    import re
+                    content = re.sub(r',(\s*[}\]])', r'\1', content)
+                    entities_data = json.loads(content)
+                    print(f"   ✅ Fixed JSON parsing")
+                except json.JSONDecodeError as e2:
+                    print(f"   ❌ Still failed after cleanup: {e2}")
+                    raise e2
             
             # Validate structure
             if 'entities' not in entities_data or 'relationships' not in entities_data:
@@ -724,9 +748,11 @@ Return ONLY the JSON, no other text."""
             
         except json.JSONDecodeError as e:
             print(f"   ❌ JSON parsing error: {e}")
+            print(f"   🔄 Returning empty entities as fallback")
             return {'entities': {}, 'relationships': []}
         except Exception as e:
             print(f"   ❌ Error extracting entities: {e}")
+            print(f"   🔄 Returning empty entities as fallback")
             return {'entities': {}, 'relationships': []}
     
     def build_knowledge_graph_from_entities(self, book_id: str, entities_data: Dict[str, Any]) -> Dict[str, Any]:
