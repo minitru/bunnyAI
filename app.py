@@ -4,11 +4,12 @@ Multi-Book Enhanced RAG API
 A clean REST API for literary analysis queries
 """
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Response
 from flask_cors import CORS
 import os
 import time
 import threading
+import json
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from dotenv import load_dotenv
 from multi_book_rag import MultiBookRAG
@@ -294,57 +295,132 @@ def get_entity_relationships(book_id, entity_id):
             'error': str(e)
         }), 500
 
-def refresh_knowledge_graph_worker(rag, book_id):
-    """Worker function for knowledge graph refresh"""
-    return rag.refresh_knowledge_graph(book_id)
-
-@app.route('/api/knowledge-graph/<book_id>/refresh', methods=['POST'])
-def refresh_knowledge_graph(book_id):
-    """Force refresh the knowledge graph with improved extraction"""
+def refresh_knowledge_graph_worker(rag, book_id, progress_callback=None):
+    """Worker function for knowledge graph refresh with progress updates"""
     try:
-        print(f"🔄 Starting knowledge graph refresh for: {book_id}")
+        print(f"🔄 Worker: Starting KG refresh for {book_id}")
+        
+        if progress_callback:
+            progress_callback("Starting knowledge graph refresh...")
+        
+        result = rag.refresh_knowledge_graph(book_id)
+        
+        if progress_callback:
+            progress_callback("Knowledge graph refresh completed!")
+        
+        print(f"✅ Worker: KG refresh completed for {book_id}")
+        return result
+    except Exception as e:
+        error_msg = f'Worker error: {str(e)}'
+        print(f"❌ Worker: Error in KG refresh for {book_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        if progress_callback:
+            progress_callback(f"Error: {error_msg}")
+        
+        return {'error': error_msg}
+
+def generate_refresh_stream(book_id):
+    """Generate streaming response with keepalive for knowledge graph refresh"""
+    def progress_callback(message):
+        # Send progress update as Server-Sent Events
+        yield f"data: {json.dumps({'type': 'progress', 'message': message})}\n\n"
+    
+    try:
+        print(f"🔄 Starting streaming KG refresh for: {book_id}")
+        
+        # Validate book_id
+        if not book_id or not isinstance(book_id, str):
+            yield f"data: {json.dumps({'type': 'error', 'error': 'Invalid book_id provided'})}\n\n"
+            return
         
         rag = get_rag_instance()
         print(f"✅ RAG instance obtained for {book_id}")
         
-        # Use ThreadPoolExecutor with timeout instead of signal
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            # Submit the task with a 10-minute timeout
-            future = executor.submit(refresh_knowledge_graph_worker, rag, book_id)
-            
-            try:
-                kg_data = future.result(timeout=600)  # 10 minutes timeout
-                print(f"✅ Knowledge graph data obtained for {book_id}")
-                
-                if 'error' in kg_data:
-                    print(f"❌ Error in kg_data for {book_id}: {kg_data['error']}")
-                    return jsonify({
-                        'success': False,
-                        'error': kg_data['error']
-                    }), 400
-                
-                print(f"✅ Returning success response for {book_id}")
-                return jsonify({
-                    'success': True,
-                    'knowledge_graph': kg_data,
-                    'message': f'Knowledge graph refreshed for {book_id}'
-                })
-                
-            except FutureTimeoutError:
-                print(f"⏰ Timeout during knowledge graph refresh for {book_id}")
-                return jsonify({
-                    'success': False,
-                    'error': 'Knowledge graph refresh timed out after 10 minutes. Please try again.'
-                }), 408
+        # Send initial progress
+        yield f"data: {json.dumps({'type': 'progress', 'message': 'Initializing knowledge graph refresh...'})}\n\n"
         
+        # Start the refresh in a thread with progress updates
+        result_container = {'result': None, 'error': None}
+        
+        def refresh_worker():
+            try:
+                result_container['result'] = rag.refresh_knowledge_graph(book_id)
+            except Exception as e:
+                result_container['error'] = str(e)
+                print(f"❌ Error in refresh worker for {book_id}: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # Start the worker thread
+        worker_thread = threading.Thread(target=refresh_worker)
+        worker_thread.start()
+        
+        # Send keepalive messages every 30 seconds while waiting
+        start_time = time.time()
+        last_keepalive = start_time
+        
+        while worker_thread.is_alive():
+            current_time = time.time()
+            
+            # Send keepalive every 30 seconds
+            if current_time - last_keepalive >= 30:
+                elapsed = int(current_time - start_time)
+                yield f"data: {json.dumps({'type': 'keepalive', 'message': f'Still processing... ({elapsed}s elapsed)'})}\n\n"
+                last_keepalive = current_time
+            
+            time.sleep(1)  # Check every second
+        
+        # Wait for thread to complete
+        worker_thread.join()
+        
+        # Check result
+        if result_container['error']:
+            yield f"data: {json.dumps({'type': 'error', 'error': result_container['error']})}\n\n"
+        elif result_container['result']:
+            if 'error' in result_container['result']:
+                yield f"data: {json.dumps({'type': 'error', 'error': result_container['result']['error']})}\n\n"
+            else:
+                # Success - send the final result
+                yield f"data: {json.dumps({'type': 'success', 'knowledge_graph': result_container['result']})}\n\n"
+        else:
+            yield f"data: {json.dumps({'type': 'error', 'error': 'No result returned from refresh operation'})}\n\n"
+            
     except Exception as e:
-        print(f"❌ Exception in refresh_knowledge_graph for {book_id}: {e}")
+        print(f"❌ Exception in streaming refresh for {book_id}: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': f'Failed to refresh knowledge graph: {str(e)}'
-        }), 500
+        yield f"data: {json.dumps({'type': 'error', 'error': f'Failed to refresh knowledge graph: {str(e)}'})}\n\n"
+
+@app.route('/api/knowledge-graph/<book_id>/refresh', methods=['GET'])
+def refresh_knowledge_graph_stream(book_id):
+    """Force refresh the knowledge graph with streaming keepalive (GET for EventSource)"""
+    print(f"🔄 Starting streaming knowledge graph refresh for: {book_id}")
+    
+    # Return streaming response with keepalive
+    return Response(
+        generate_refresh_stream(book_id),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Cache-Control'
+        }
+    )
+
+@app.route('/api/knowledge-graph/<book_id>/refresh', methods=['POST'])
+def refresh_knowledge_graph(book_id):
+    """Force refresh the knowledge graph (POST for backward compatibility)"""
+    print(f"🔄 Starting knowledge graph refresh for: {book_id}")
+    
+    # For POST requests, redirect to the streaming endpoint
+    return jsonify({
+        'success': True,
+        'message': 'Please use GET request for streaming refresh, or use the web interface',
+        'streaming_url': f'/api/knowledge-graph/{book_id}/refresh'
+    })
 
 if __name__ == '__main__':
     print("🚀 Starting Multi-Book RAG Web Application...")

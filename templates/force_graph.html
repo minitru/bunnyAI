@@ -559,46 +559,68 @@
             refreshButton.textContent = 'Regenerating...';
             
             try {
-                const response = await fetch(`/api/knowledge-graph/${encodeURIComponent(bookId)}/refresh`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // Use EventSource for streaming response with keepalive
+                const eventSource = new EventSource(`/api/knowledge-graph/${encodeURIComponent(bookId)}/refresh`);
                 
-                // Check if response is HTML (error page) instead of JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    console.error('Server returned non-JSON response:', text.substring(0, 200));
-                    throw new Error(`Server error: Received HTML instead of JSON. Status: ${response.status}. Please check if the server is running.`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Show completion message with 100% progress
-                    showLoadingWithProgress(
-                        'Knowledge Graph Regenerated!', 
-                        'Loading the updated graph with comprehensive data...',
-                        100
-                    );
-                    
-                    // Wait a moment to show completion, then reload
-                    setTimeout(async () => {
-                        await loadForceGraph();
+                eventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
                         
-                        // Show success message with details
-                        const metadata = data.knowledge_graph?.refresh_metadata;
-                        let successMessage = '✅ Knowledge graph refreshed successfully!';
-                        if (metadata) {
-                            successMessage += `\n\n📊 Results:\n• ${metadata.entity_count} entities extracted\n• ${metadata.relationship_count} relationships identified\n• Refreshed at: ${new Date(metadata.refreshed_at).toLocaleString()}`;
+                        if (data.type === 'progress') {
+                            // Update progress message
+                            const progressDetails = document.querySelector('.progress-details');
+                            if (progressDetails) {
+                                progressDetails.textContent = data.message;
+                            }
+                        } else if (data.type === 'keepalive') {
+                            // Update keepalive message
+                            const progressDetails = document.querySelector('.progress-details');
+                            if (progressDetails) {
+                                progressDetails.textContent = data.message;
+                            }
+                        } else if (data.type === 'success') {
+                            // Success - close the connection and reload the graph
+                            eventSource.close();
+                            
+                            // Hide loading and reload the graph
+                            hideLoading();
+                            loadForceGraph();
+                            
+                            // Show success message
+                            showInfo(`Knowledge graph refreshed successfully for ${bookId}!`);
+                            
+                        } else if (data.type === 'error') {
+                            // Error - close the connection and show error
+                            eventSource.close();
+                            hideLoading();
+                            throw new Error(data.error);
                         }
-                        alert(successMessage);
-                    }, 1500);
-                } else {
-                    showError(data.error || 'Failed to refresh knowledge graph');
-                }
+                    } catch (parseError) {
+                        console.error('Error parsing SSE data:', parseError);
+                        eventSource.close();
+                        hideLoading();
+                        throw new Error('Invalid response format from server');
+                    }
+                };
+                
+                eventSource.onerror = function(event) {
+                    console.error('EventSource error:', event);
+                    eventSource.close();
+                    hideLoading();
+                    throw new Error('Connection error during knowledge graph refresh');
+                };
+                
+                // Set a timeout for the entire operation (15 minutes)
+                setTimeout(() => {
+                    if (eventSource.readyState !== EventSource.CLOSED) {
+                        eventSource.close();
+                        hideLoading();
+                        throw new Error('Knowledge graph refresh timed out after 15 minutes');
+                    }
+                }, 15 * 60 * 1000);
+                
+                // The success case is handled in the onmessage handler above
+                return; // Exit early since we're using streaming
             } catch (error) {
                 console.error('Error refreshing knowledge graph:', error);
                 showError('Error refreshing knowledge graph: ' + error.message);
