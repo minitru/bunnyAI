@@ -211,23 +211,48 @@
         </div>
         
         <div class="info-panel" id="legendPanel">
-            <h3>📊 Connection Legend</h3>
-            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <div style="width: 6px; height: 2px; background: #999; border-radius: 1px;"></div>
-                    <span style="font-size: 12px;">Strong (0.8-1.0)</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <div style="width: 4px; height: 2px; background: #999; border-radius: 1px;"></div>
-                    <span style="font-size: 12px;">Medium (0.5-0.8)</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <div style="width: 2px; height: 2px; background: #999; border-radius: 1px;"></div>
-                    <span style="font-size: 12px;">Weak (0.0-0.5)</span>
+            <h3>📊 Graph Legend</h3>
+            
+            <!-- Node Size Legend -->
+            <div style="margin-bottom: 15px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #333;">Node Size = Story Importance</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 25px; height: 25px; background: #ff6b6b; border-radius: 50%; border: 3px solid #333;"></div>
+                        <span style="font-size: 12px;">High Importance (70%+)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 18px; height: 18px; background: #4ecdc4; border-radius: 50%; border: 2px solid #fff;"></div>
+                        <span style="font-size: 12px;">Medium Importance (40-70%)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; background: #45b7d1; border-radius: 50%; border: 2px solid #fff;"></div>
+                        <span style="font-size: 12px;">Low Importance (0-40%)</span>
+                    </div>
                 </div>
             </div>
-            <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                💡 Hover over connections to see relationship strength and details
+            
+            <!-- Connection Strength Legend -->
+            <div style="margin-bottom: 15px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #333;">Connection Thickness = Relationship Strength</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 6px; height: 2px; background: #999; border-radius: 1px;"></div>
+                        <span style="font-size: 12px;">Strong (0.8-1.0)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 4px; height: 2px; background: #999; border-radius: 1px;"></div>
+                        <span style="font-size: 12px;">Medium (0.5-0.8)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 2px; height: 2px; background: #999; border-radius: 1px;"></div>
+                        <span style="font-size: 12px;">Weak (0.0-0.5)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <p style="font-size: 12px; color: #666; margin: 0;">
+                💡 Hover over nodes to see importance percentage and details
             </p>
         </div>
     </div>
@@ -388,26 +413,71 @@
                     .on('drag', dragged)
                     .on('end', dragended));
             
-            // Add circles to nodes
+            // Add circles to nodes with importance-based sizing
             node.append('circle')
-                .attr('r', d => Math.sqrt(d.importance * 50) + 5)
+                .attr('r', d => {
+                    // Enhanced importance-based sizing
+                    // Scale importance (0-1) to radius (8-25)
+                    // More important nodes are significantly larger
+                    const minRadius = 8;
+                    const maxRadius = 25;
+                    const importance = d.importance || 0.5;
+                    
+                    // Use a power function to make high importance more prominent
+                    const scaledImportance = Math.pow(importance, 0.7);
+                    return minRadius + (scaledImportance * (maxRadius - minRadius));
+                })
                 .attr('fill', d => getNodeColor(d.type))
-                .attr('stroke', '#fff')
-                .attr('stroke-width', 2);
+                .attr('stroke', d => {
+                    // Make more important nodes have thicker borders
+                    const importance = d.importance || 0.5;
+                    return importance > 0.7 ? '#333' : '#fff';
+                })
+                .attr('stroke-width', d => {
+                    // Thicker stroke for more important nodes
+                    const importance = d.importance || 0.5;
+                    return importance > 0.7 ? 3 : 2;
+                })
+                .attr('opacity', d => {
+                    // Slightly more opaque for important nodes
+                    const importance = d.importance || 0.5;
+                    return importance > 0.8 ? 1.0 : 0.9;
+                });
             
-            // Add labels to nodes
+            // Add labels to nodes with adaptive sizing
             node.append('text')
                 .text(d => d.name)
                 .attr('fill', '#333')
                 .attr('text-anchor', 'middle')
-                .attr('dy', '.35em');
+                .attr('dy', '.35em')
+                .attr('font-size', d => {
+                    // Scale font size based on node importance
+                    const importance = d.importance || 0.5;
+                    const minFontSize = 10;
+                    const maxFontSize = 14;
+                    const scaledImportance = Math.pow(importance, 0.7);
+                    return minFontSize + (scaledImportance * (maxFontSize - minFontSize));
+                })
+                .attr('font-weight', d => {
+                    // Make important nodes have bolder text
+                    const importance = d.importance || 0.5;
+                    return importance > 0.7 ? 'bold' : 'normal';
+                });
             
-            // Add tooltips to nodes
+            // Add tooltips to nodes with importance information
             node.on('mouseover', function(event, d) {
                 tooltip.transition().duration(200).style('opacity', .9);
+                
+                // Create importance indicator
+                const importance = d.importance || 0.5;
+                const importancePercent = Math.round(importance * 100);
+                const importanceBar = '█'.repeat(Math.floor(importance * 10)) + '░'.repeat(10 - Math.floor(importance * 10));
+                
                 tooltip.html(`
                     <strong>${d.name}</strong><br/>
                     Type: ${d.type}<br/>
+                    Importance: ${importancePercent}%<br/>
+                    <span style="font-family: monospace; color: #007bff;">${importanceBar}</span><br/>
                     ${d.description || 'No description'}
                 `)
                 .style('left', (event.pageX + 10) + 'px')
@@ -616,11 +686,39 @@
             const nodeCount = data.nodes ? data.nodes.length : 0;
             const linkCount = data.links ? data.links.length : 0;
             
+            // Calculate importance statistics
+            let importanceStats = '';
+            if (data.nodes && data.nodes.length > 0) {
+                const importances = data.nodes.map(n => n.importance || 0.5);
+                const avgImportance = importances.reduce((a, b) => a + b, 0) / importances.length;
+                const maxImportance = Math.max(...importances);
+                const minImportance = Math.min(...importances);
+                
+                // Count nodes by importance level
+                const highImportance = importances.filter(i => i >= 0.7).length;
+                const mediumImportance = importances.filter(i => i >= 0.4 && i < 0.7).length;
+                const lowImportance = importances.filter(i => i < 0.4).length;
+                
+                importanceStats = `
+                    <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 14px;">📊 Importance Distribution</h4>
+                        <p style="margin: 2px 0; font-size: 12px;"><strong>Average:</strong> ${Math.round(avgImportance * 100)}%</p>
+                        <p style="margin: 2px 0; font-size: 12px;"><strong>Range:</strong> ${Math.round(minImportance * 100)}% - ${Math.round(maxImportance * 100)}%</p>
+                        <div style="display: flex; gap: 15px; margin-top: 8px;">
+                            <span style="font-size: 11px; color: #dc3545;">🔴 High: ${highImportance}</span>
+                            <span style="font-size: 11px; color: #ffc107;">🟡 Medium: ${mediumImportance}</span>
+                            <span style="font-size: 11px; color: #28a745;">🟢 Low: ${lowImportance}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
             graphInfo.innerHTML = `
                 <p><strong>Nodes:</strong> ${nodeCount}</p>
                 <p><strong>Links:</strong> ${linkCount}</p>
                 ${metadata.book_id ? `<p><strong>Book:</strong> ${metadata.book_id}</p>` : ''}
                 ${metadata.books ? `<p><strong>Books:</strong> ${metadata.books.join(', ')}</p>` : ''}
+                ${importanceStats}
             `;
             
             infoPanel.style.display = 'block';
