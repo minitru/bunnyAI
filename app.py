@@ -8,8 +8,8 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import os
 import time
-import signal
 import threading
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from dotenv import load_dotenv
 from multi_book_rag import MultiBookRAG
 
@@ -291,8 +291,9 @@ def get_entity_relationships(book_id, entity_id):
             'error': str(e)
         }), 500
 
-def timeout_handler(signum, frame):
-    raise TimeoutError("Knowledge graph refresh timed out")
+def refresh_knowledge_graph_worker(rag, book_id):
+    """Worker function for knowledge graph refresh"""
+    return rag.refresh_knowledge_graph(book_id)
 
 @app.route('/api/knowledge-graph/<book_id>/refresh', methods=['POST'])
 def refresh_knowledge_graph(book_id):
@@ -300,40 +301,38 @@ def refresh_knowledge_graph(book_id):
     try:
         print(f"🔄 Starting knowledge graph refresh for: {book_id}")
         
-        # Set a timeout of 10 minutes (600 seconds)
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(600)
+        rag = get_rag_instance()
+        print(f"✅ RAG instance obtained for {book_id}")
         
-        try:
-            rag = get_rag_instance()
-            print(f"✅ RAG instance obtained for {book_id}")
+        # Use ThreadPoolExecutor with timeout instead of signal
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            # Submit the task with a 10-minute timeout
+            future = executor.submit(refresh_knowledge_graph_worker, rag, book_id)
             
-            kg_data = rag.refresh_knowledge_graph(book_id)
-            print(f"✅ Knowledge graph data obtained for {book_id}")
-            
-            # Cancel the alarm
-            signal.alarm(0)
-            
-            if 'error' in kg_data:
-                print(f"❌ Error in kg_data for {book_id}: {kg_data['error']}")
+            try:
+                kg_data = future.result(timeout=600)  # 10 minutes timeout
+                print(f"✅ Knowledge graph data obtained for {book_id}")
+                
+                if 'error' in kg_data:
+                    print(f"❌ Error in kg_data for {book_id}: {kg_data['error']}")
+                    return jsonify({
+                        'success': False,
+                        'error': kg_data['error']
+                    }), 400
+                
+                print(f"✅ Returning success response for {book_id}")
+                return jsonify({
+                    'success': True,
+                    'knowledge_graph': kg_data,
+                    'message': f'Knowledge graph refreshed for {book_id}'
+                })
+                
+            except FutureTimeoutError:
+                print(f"⏰ Timeout during knowledge graph refresh for {book_id}")
                 return jsonify({
                     'success': False,
-                    'error': kg_data['error']
-                }), 400
-            
-            print(f"✅ Returning success response for {book_id}")
-            return jsonify({
-                'success': True,
-                'knowledge_graph': kg_data,
-                'message': f'Knowledge graph refreshed for {book_id}'
-            })
-            
-        except TimeoutError:
-            print(f"⏰ Timeout during knowledge graph refresh for {book_id}")
-            return jsonify({
-                'success': False,
-                'error': 'Knowledge graph refresh timed out after 10 minutes. Please try again.'
-            }), 408
+                    'error': 'Knowledge graph refresh timed out after 10 minutes. Please try again.'
+                }), 408
         
     except Exception as e:
         print(f"❌ Exception in refresh_knowledge_graph for {book_id}: {e}")
@@ -343,9 +342,6 @@ def refresh_knowledge_graph(book_id):
             'success': False,
             'error': f'Failed to refresh knowledge graph: {str(e)}'
         }), 500
-    finally:
-        # Make sure to cancel the alarm
-        signal.alarm(0)
 
 if __name__ == '__main__':
     print("🚀 Starting Multi-Book RAG Web Application...")
