@@ -607,13 +607,30 @@ Provide a detailed analysis of the plot structure, conflicts, and themes."""
         """
         print(f"🔄 Refreshing knowledge graph for {book_id} with comprehensive extraction...")
         
-        # Use the comprehensive analysis method
-        analysis = self.analyze_single_book(book_id, force_refresh=True)
-        
-        if 'error' in analysis:
-            return {'error': analysis['error']}
-        
-        return analysis.get('knowledge_graph', {'entities': {}, 'relationships': []})
+        try:
+            # Use the comprehensive analysis method
+            analysis = self.analyze_single_book(book_id, force_refresh=True)
+            
+            if 'error' in analysis:
+                return {'error': analysis['error']}
+            
+            kg_data = analysis.get('knowledge_graph', {'entities': {}, 'relationships': []})
+            
+            # Add metadata about the refresh
+            if isinstance(kg_data, dict):
+                kg_data['refresh_metadata'] = {
+                    'refreshed_at': datetime.now().isoformat(),
+                    'entity_count': len(kg_data.get('entities', {})),
+                    'relationship_count': len(kg_data.get('relationships', [])),
+                    'book_id': book_id
+                }
+            
+            print(f"✅ Knowledge graph refresh completed for {book_id}")
+            return kg_data
+            
+        except Exception as e:
+            print(f"❌ Error refreshing knowledge graph for {book_id}: {e}")
+            return {'error': f'Failed to refresh knowledge graph: {str(e)}'}
     
     def extract_comprehensive_entities(self, book_id: str, context: str) -> Dict[str, Any]:
         """

@@ -72,6 +72,65 @@
             color: #666;
         }
         
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+        }
+        
+        .loading-text {
+            font-size: 16px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .loading-details {
+            font-size: 14px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .progress-bar {
+            width: 300px;
+            height: 6px;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #007bff;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .progress-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
         .error {
             text-align: center;
             padding: 50px;
@@ -214,7 +273,7 @@
                 return;
             }
             
-            showLoading();
+            showLoading('Loading Knowledge Graph...', 'Fetching graph data and preparing visualization...');
             
             try {
                 const response = await fetch(`/api/force-graph/${encodeURIComponent(bookId)}`);
@@ -413,7 +472,21 @@
                 return;
             }
             
-            showLoading();
+            // Show detailed loading state for refresh with progress simulation
+            showLoadingWithProgress(
+                'Starting Knowledge Graph Regeneration...', 
+                'This may take 2-5 minutes. Please wait while we extract comprehensive entities and relationships.',
+                0
+            );
+            
+            // Start progress simulation
+            simulateProgress();
+            
+            // Disable the refresh button to prevent multiple requests
+            const refreshButton = document.getElementById('refreshGraph');
+            const originalText = refreshButton.textContent;
+            refreshButton.disabled = true;
+            refreshButton.textContent = 'Regenerating...';
             
             try {
                 const response = await fetch(`/api/knowledge-graph/${encodeURIComponent(bookId)}/refresh`, {
@@ -426,15 +499,35 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Reload the force graph with new data
-                    await loadForceGraph();
-                    alert('Knowledge graph refreshed successfully! The graph now shows more comprehensive data.');
+                    // Show completion message with 100% progress
+                    showLoadingWithProgress(
+                        'Knowledge Graph Regenerated!', 
+                        'Loading the updated graph with comprehensive data...',
+                        100
+                    );
+                    
+                    // Wait a moment to show completion, then reload
+                    setTimeout(async () => {
+                        await loadForceGraph();
+                        
+                        // Show success message with details
+                        const metadata = data.knowledge_graph?.refresh_metadata;
+                        let successMessage = '✅ Knowledge graph refreshed successfully!';
+                        if (metadata) {
+                            successMessage += `\n\n📊 Results:\n• ${metadata.entity_count} entities extracted\n• ${metadata.relationship_count} relationships identified\n• Refreshed at: ${new Date(metadata.refreshed_at).toLocaleString()}`;
+                        }
+                        alert(successMessage);
+                    }, 1500);
                 } else {
                     showError(data.error || 'Failed to refresh knowledge graph');
                 }
             } catch (error) {
                 console.error('Error refreshing knowledge graph:', error);
                 showError('Error refreshing knowledge graph: ' + error.message);
+            } finally {
+                // Re-enable the refresh button
+                refreshButton.disabled = false;
+                refreshButton.textContent = originalText;
             }
         }
         
@@ -446,9 +539,58 @@
         }
         
         // Show loading state
-        function showLoading() {
-            document.getElementById('graphContainer').innerHTML = '<div class="loading">Loading graph...</div>';
+        function showLoading(message = 'Loading graph...', details = '') {
+            const loadingHtml = `
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                    <div class="loading-text">${message}</div>
+                    ${details ? `<div class="loading-details">${details}</div>` : ''}
+                </div>
+            `;
+            document.getElementById('graphContainer').innerHTML = loadingHtml;
             document.getElementById('infoPanel').style.display = 'none';
+        }
+        
+        // Show loading state with progress bar
+        function showLoadingWithProgress(message = 'Loading...', details = '', progress = 0) {
+            const loadingHtml = `
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                    <div class="loading-text">${message}</div>
+                    ${details ? `<div class="loading-details">${details}</div>` : ''}
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="progress-text">${progress}% complete</div>
+                </div>
+            `;
+            document.getElementById('graphContainer').innerHTML = loadingHtml;
+            document.getElementById('infoPanel').style.display = 'none';
+        }
+        
+        // Simulate progress during knowledge graph regeneration
+        function simulateProgress() {
+            const stages = [
+                { progress: 10, message: 'Analyzing book content...', details: 'Reading and processing text chunks', timeLeft: '4-5 minutes' },
+                { progress: 25, message: 'Extracting entities...', details: 'Identifying characters, places, and objects', timeLeft: '3-4 minutes' },
+                { progress: 50, message: 'Building relationships...', details: 'Connecting entities and analyzing interactions', timeLeft: '2-3 minutes' },
+                { progress: 75, message: 'Validating data...', details: 'Cleaning and organizing knowledge graph', timeLeft: '1-2 minutes' },
+                { progress: 90, message: 'Finalizing graph...', details: 'Preparing visualization data', timeLeft: '30 seconds' }
+            ];
+            
+            let currentStage = 0;
+            
+            const updateProgress = () => {
+                if (currentStage < stages.length) {
+                    const stage = stages[currentStage];
+                    const detailsWithTime = `${stage.details} (Estimated time remaining: ${stage.timeLeft})`;
+                    showLoadingWithProgress(stage.message, detailsWithTime, stage.progress);
+                    currentStage++;
+                    setTimeout(updateProgress, 2000); // Update every 2 seconds
+                }
+            };
+            
+            updateProgress();
         }
         
         // Show error state
