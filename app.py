@@ -118,6 +118,7 @@ def query_books():
         
         # Optional parameters with defaults
         book_id = data.get('book', None)  # None means all books
+        model = data.get('model', 'openai/gpt-4o-mini')  # Default model
         n_results = data.get('context_chunks', 80)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
@@ -129,12 +130,13 @@ def query_books():
         # Record start time
         start_time = time.time()
         
-        # Perform query
+        # Perform query with selected model
         result = rag.query(
             question=question,
             book_ids=book_ids,
             n_results=n_results,
-            use_book_knowledge=use_book_knowledge
+            use_book_knowledge=use_book_knowledge,
+            model=model
         )
         
         # Calculate processing time
@@ -146,6 +148,7 @@ def query_books():
             'books_searched': result['books_searched'],
             'context_length': result['context_length'],
             'chunks_used': result['chunks_used'],
+            'model_used': result['model_used'],
             'processing_time': round(processing_time, 2)
         })
         

@@ -306,7 +306,7 @@ class MultiBookRAG:
                     summaries.append(f"=== {book_title} ===\n{summary}\n")
             return "\n".join(summaries)
     
-    def generate_response(self, query: str, context: str, book_knowledge: str = "", book_ids: Optional[List[str]] = None) -> str:
+    def generate_response(self, query: str, context: str, book_knowledge: str = "", book_ids: Optional[List[str]] = None, model: str = 'openai/gpt-4o-mini') -> str:
         """
         Generate response with book knowledge integration
         
@@ -315,6 +315,7 @@ class MultiBookRAG:
             context: Retrieved document context
             book_knowledge: Comprehensive book analysis
             book_ids: List of book IDs being queried
+            model: AI model to use for the response
             
         Returns:
             Generated response
@@ -443,7 +444,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
             ]
             
             response = self.client.chat.completions.create(
-                model=self.model,
+                model=model,
                 messages=messages,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature
@@ -455,7 +456,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
         except Exception as e:
             return f"Error generating response: {e}"
     
-    def query(self, question: str, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True) -> Dict[str, Any]:
+    def query(self, question: str, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True, model: str = 'openai/gpt-4o-mini') -> Dict[str, Any]:
         """
         Main query method with book knowledge integration
         
@@ -464,6 +465,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
             book_ids: List of book IDs to query, or None for all books
             n_results: Number of chunks to retrieve
             use_book_knowledge: Whether to use comprehensive book analysis
+            model: AI model to use for the query
             
         Returns:
             Dictionary containing the answer and metadata
@@ -513,7 +515,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
             time.sleep(self.question_final_grace_ms / 1000.0)
         
         # Generate response
-        answer = self.generate_response(question, context, book_knowledge, book_ids)
+        answer = self.generate_response(question, context, book_knowledge, book_ids, model)
         
         # Add to conversation history
         book_context_str = ', '.join([book['book_title'] for book in available_books if book['book_id'] in book_ids]) if book_ids else "All Books"
@@ -524,7 +526,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
             'chunks_used': n_results,
             'context': context,
             'book_knowledge_used': bool(book_knowledge),
-            'model_used': self.model,
+            'model_used': model,
             'context_length': len(context),
             'book_knowledge_length': len(book_knowledge) if book_knowledge else 0,
             'books_searched': book_ids

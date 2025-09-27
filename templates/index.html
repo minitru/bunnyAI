@@ -183,13 +183,31 @@
             background: #f8d7da;
             border-left-color: #dc3545;
         }
+        
+        .model-indicator {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #1976d2;
+            text-align: center;
+            font-weight: 500;
+        }
         .clearfix::after {
             content: "";
             display: table;
             clear: both;
         }
-        .book-selector {
+        .selector-row {
+            display: flex;
+            gap: 20px;
             margin-bottom: 15px;
+        }
+        
+        .book-selector, .model-selector {
+            flex: 1;
         }
         .form-label {
             display: block;
@@ -257,12 +275,24 @@
         </div>
         
         <div class="query-box">
-            <div class="book-selector">
-                <label for="book-choice" class="form-label">Select Book:</label>
-                <select id="book-choice" class="form-select">
-                    <option value="all">All Books</option>
-                    <!-- Books will be loaded dynamically -->
-                </select>
+            <div class="selector-row">
+                <div class="book-selector">
+                    <label for="book-choice" class="form-label">Select Book:</label>
+                    <select id="book-choice" class="form-select">
+                        <option value="all">All Books</option>
+                        <!-- Books will be loaded dynamically -->
+                    </select>
+                </div>
+                
+                <div class="model-selector">
+                    <label for="model-choice" class="form-label">AI Model:</label>
+                    <select id="model-choice" class="form-select">
+                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
+                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Balanced)</option>
+                        <option value="anthropic/claude-3-opus">Claude 3 Opus (Most Capable)</option>
+                        <option value="openai/gpt-4o">GPT-4o (Advanced Analysis)</option>
+                    </select>
+                </div>
             </div>
             
             <textarea 
@@ -356,6 +386,7 @@
                 this.submitBtn = document.getElementById('submit-btn');
                 this.responseDiv = document.getElementById('response');
                 this.bookChoice = document.getElementById('book-choice');
+                this.modelChoice = document.getElementById('model-choice');
                 this.clearMemoryBtn = document.getElementById('clear-memory-btn');
                 
                 this.setupEventListeners();
@@ -410,6 +441,7 @@
             async submitQuery() {
                 const question = this.questionInput.value.trim();
                 const selectedBook = this.bookChoice.value;
+                const selectedModel = this.modelChoice.value;
                 
                 if (!question) {
                     this.showError('Please enter a question');
@@ -420,7 +452,10 @@
                 this.hideResponse();
                 
                 try {
-                    const requestBody = { question };
+                    const requestBody = { 
+                        question,
+                        model: selectedModel
+                    };
                     if (selectedBook !== 'all') {
                         requestBody.book = selectedBook;
                     }
@@ -436,7 +471,7 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        this.showResponse(data.answer);
+                        this.showResponse(data.answer, data.model_used);
                     } else {
                         this.showError('Query failed: ' + data.error);
                     }
@@ -452,8 +487,15 @@
                 this.submitBtn.textContent = loading ? 'Thinking...' : 'What is it now?';
             }
             
-            showResponse(answer) {
-                this.responseDiv.innerHTML = parseMarkdown(answer) + '<div class="scroll-indicator">Scroll to read more</div>';
+            showResponse(answer, modelUsed = null) {
+                // Create model indicator
+                let modelIndicator = '';
+                if (modelUsed) {
+                    const modelName = this.getModelDisplayName(modelUsed);
+                    modelIndicator = `<div class="model-indicator">🤖 Powered by ${modelName}</div>`;
+                }
+                
+                this.responseDiv.innerHTML = modelIndicator + parseMarkdown(answer) + '<div class="scroll-indicator">Scroll to read more</div>';
                 this.responseDiv.className = 'response';
                 this.responseDiv.style.display = 'block';
                 
@@ -467,6 +509,16 @@
                         indicator.classList.add('hidden');
                     }
                 });
+            }
+            
+            getModelDisplayName(modelId) {
+                const modelNames = {
+                    'openai/gpt-4o-mini': 'GPT-4o Mini',
+                    'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
+                    'anthropic/claude-3-opus': 'Claude 3 Opus',
+                    'openai/gpt-4o': 'GPT-4o'
+                };
+                return modelNames[modelId] || modelId;
             }
             
             showError(message) {
