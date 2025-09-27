@@ -279,7 +279,8 @@ Return ONLY the JSON, no other text."""
     
     def get_force_graph_data(self, book_id: str) -> Dict[str, Any]:
         """Convert knowledge graph to force graph format for visualization"""
-        kg_data = self.get_knowledge_graph(book_id)
+        # Use the validation function to ensure clean data
+        kg_data = self.validate_and_clean_knowledge_graph(book_id)
         
         if not kg_data:
             return {"nodes": [], "links": []}
@@ -297,7 +298,7 @@ Return ONLY the JSON, no other text."""
             }
             nodes.append(node)
         
-        # Convert relationships to links
+        # Convert relationships to links (already validated by validate_and_clean_knowledge_graph)
         links = []
         for rel in kg_data.get('relationships', []):
             link = {
@@ -383,6 +384,63 @@ Return ONLY the JSON, no other text."""
             return datetime.now() < expiry_date
         except:
             return False
+    
+    def validate_and_clean_knowledge_graph(self, book_id: str) -> Dict[str, Any]:
+        """
+        Validate and clean knowledge graph data, removing orphaned relationships
+        
+        Args:
+            book_id: The book identifier
+            
+        Returns:
+            Cleaned knowledge graph data
+        """
+        kg_data = self.get_knowledge_graph(book_id)
+        
+        if not kg_data:
+            return {'entities': {}, 'relationships': []}
+        
+        entities = kg_data.get('entities', {})
+        relationships = kg_data.get('relationships', [])
+        
+        # Get all entity IDs
+        entity_ids = set(entities.keys())
+        
+        # Filter out orphaned relationships
+        valid_relationships = []
+        orphaned_count = 0
+        
+        for rel in relationships:
+            from_node = rel.get('from')
+            to_node = rel.get('to')
+            
+            if from_node in entity_ids and to_node in entity_ids:
+                valid_relationships.append(rel)
+            else:
+                orphaned_count += 1
+                print(f"   🧹 Removing orphaned relationship: {from_node} -> {to_node}")
+        
+        if orphaned_count > 0:
+            print(f"   🧹 Cleaned {orphaned_count} orphaned relationships from {book_id}")
+            
+            # Save the cleaned data back to cache
+            cleaned_data = {
+                'entities': entities,
+                'relationships': valid_relationships
+            }
+            
+            try:
+                cache_file = os.path.join(self.kg_dir, f"kg_{book_id}.pkl")
+                with open(cache_file, 'wb') as f:
+                    pickle.dump(cleaned_data, f)
+                print(f"   💾 Saved cleaned knowledge graph for {book_id}")
+            except Exception as e:
+                print(f"   ⚠️ Error saving cleaned knowledge graph: {e}")
+        
+        return {
+            'entities': entities,
+            'relationships': valid_relationships
+        }
     
 
 def main():
