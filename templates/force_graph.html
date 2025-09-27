@@ -603,9 +603,12 @@
                             eventSource.close();
                             hideLoading();
                             throw new Error(data.error);
+                        } else {
+                            console.log('Unknown message type:', data.type);
                         }
                     } catch (parseError) {
                         console.error('Error parsing SSE data:', parseError);
+                        console.error('Raw event data:', event.data);
                         eventSource.close();
                         hideLoading();
                         throw new Error('Invalid response format from server');
@@ -614,9 +617,14 @@
                 
                 eventSource.onerror = function(event) {
                     console.error('EventSource error:', event);
+                    console.error('EventSource readyState:', eventSource.readyState);
                     eventSource.close();
                     hideLoading();
                     throw new Error('Connection error during knowledge graph refresh');
+                };
+                
+                eventSource.onopen = function(event) {
+                    console.log('EventSource connection opened');
                 };
                 
                 // Set a timeout for the entire operation (15 minutes)

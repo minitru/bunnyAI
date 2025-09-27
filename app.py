@@ -395,9 +395,9 @@ def generate_refresh_stream(book_id):
                 print(f"❌ Sending error response for {book_id}: {result_container['result']['error']}")
                 yield f"data: {json.dumps({'type': 'error', 'error': result_container['result']['error']})}\n\n"
             else:
-                # Success - send the final result
+                # Success - send a simple success message
                 print(f"✅ Sending success response for {book_id}")
-                yield f"data: {json.dumps({'type': 'success', 'knowledge_graph': result_container['result']})}\n\n"
+                yield f"data: {json.dumps({'type': 'success', 'message': 'Knowledge graph refresh completed successfully'})}\n\n"
         else:
             print(f"❌ No result for {book_id}")
             yield f"data: {json.dumps({'type': 'error', 'error': 'No result returned from refresh operation'})}\n\n"
