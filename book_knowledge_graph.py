@@ -246,6 +246,20 @@ Return ONLY the JSON, no other text."""
         
         return embedding
     
+    def _save_knowledge_graph_to_cache(self, book_id: str, kg_data: Dict[str, Any]):
+        """Save knowledge graph data to cache file"""
+        try:
+            cache_file = f"cache/knowledge_graphs/kg_{book_id}.pkl"
+            os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+            
+            with open(cache_file, 'wb') as f:
+                pickle.dump(kg_data, f)
+            
+            print(f"   💾 Saved knowledge graph to cache: {len(kg_data.get('entities', {}))} entities, {len(kg_data.get('relationships', []))} relationships")
+            
+        except Exception as e:
+            print(f"   ⚠️ Error saving knowledge graph to cache: {e}")
+    
     def get_knowledge_graph(self, book_id: str) -> Optional[Dict[str, Any]]:
         """Get cached knowledge graph for a book"""
         cache_file = os.path.join(self.kg_dir, f"kg_{book_id}.pkl")
@@ -255,8 +269,9 @@ Return ONLY the JSON, no other text."""
                 with open(cache_file, 'rb') as f:
                     cached_data = pickle.load(f)
                 
-                if self.is_cache_valid(cached_data.get('metadata', {})):
-                    return cached_data['knowledge_graph']
+                # The cache file contains the knowledge graph data directly
+                if 'entities' in cached_data and 'relationships' in cached_data:
+                    return cached_data
             except Exception as e:
                 print(f"Error loading knowledge graph for {book_id}: {e}")
         

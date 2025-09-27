@@ -798,6 +798,9 @@ Return ONLY the JSON, no other text."""
         # Store entities in ChromaDB for semantic search
         self.knowledge_graph._store_entities_in_chromadb(book_id, entities_data['entities'])
         
+        # Save the knowledge graph to cache file
+        self.knowledge_graph._save_knowledge_graph_to_cache(book_id, entities_data)
+        
         return entities_data
 
 def main():
