@@ -564,7 +564,9 @@
                 
                 eventSource.onmessage = function(event) {
                     try {
+                        console.log('SSE message received:', event.data);
                         const data = JSON.parse(event.data);
+                        console.log('Parsed SSE data:', data);
                         
                         if (data.type === 'progress') {
                             // Update progress message
@@ -580,17 +582,24 @@
                             }
                         } else if (data.type === 'success') {
                             // Success - close the connection and reload the graph
+                            console.log('Success message received, closing connection');
                             eventSource.close();
                             
-                            // Hide loading and reload the graph
+                            // Hide loading first
+                            console.log('Hiding loading...');
                             hideLoading();
+                            
+                            // Reload the graph
+                            console.log('Reloading force graph...');
                             loadForceGraph();
                             
                             // Show success message
+                            console.log('Showing success message...');
                             showInfo(`Knowledge graph refreshed successfully for ${bookId}!`);
                             
                         } else if (data.type === 'error') {
                             // Error - close the connection and show error
+                            console.log('Error message received:', data.error);
                             eventSource.close();
                             hideLoading();
                             throw new Error(data.error);

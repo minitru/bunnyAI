@@ -355,13 +355,15 @@ def generate_refresh_stream(book_id):
         
         # Start the worker thread
         worker_thread = threading.Thread(target=refresh_worker)
+        worker_thread.daemon = True  # Make it a daemon thread
         worker_thread.start()
         
         # Send keepalive messages every 30 seconds while waiting
         start_time = time.time()
         last_keepalive = start_time
+        max_wait_time = 600  # 10 minutes max
         
-        while worker_thread.is_alive():
+        while worker_thread.is_alive() and (time.time() - start_time) < max_wait_time:
             current_time = time.time()
             
             # Send keepalive every 30 seconds
@@ -372,19 +374,32 @@ def generate_refresh_stream(book_id):
             
             time.sleep(1)  # Check every second
         
+        # Check if we timed out
+        if worker_thread.is_alive():
+            print(f"⏰ Thread still alive after {max_wait_time}s, forcing timeout")
+            yield f"data: {json.dumps({'type': 'error', 'error': f'Knowledge graph refresh timed out after {max_wait_time} seconds'})}\n\n"
+            return
+        
         # Wait for thread to complete
-        worker_thread.join()
+        worker_thread.join(timeout=5)  # 5 second timeout for join
+        
+        print(f"🔍 Thread completed for {book_id}. Result: {type(result_container['result'])}, Error: {result_container['error']}")
         
         # Check result
         if result_container['error']:
+            print(f"❌ Sending error response for {book_id}: {result_container['error']}")
             yield f"data: {json.dumps({'type': 'error', 'error': result_container['error']})}\n\n"
         elif result_container['result']:
-            if 'error' in result_container['result']:
+            # Check if the result is an error dictionary
+            if isinstance(result_container['result'], dict) and 'error' in result_container['result']:
+                print(f"❌ Sending error response for {book_id}: {result_container['result']['error']}")
                 yield f"data: {json.dumps({'type': 'error', 'error': result_container['result']['error']})}\n\n"
             else:
                 # Success - send the final result
+                print(f"✅ Sending success response for {book_id}")
                 yield f"data: {json.dumps({'type': 'success', 'knowledge_graph': result_container['result']})}\n\n"
         else:
+            print(f"❌ No result for {book_id}")
             yield f"data: {json.dumps({'type': 'error', 'error': 'No result returned from refresh operation'})}\n\n"
             
     except Exception as e:
@@ -421,6 +436,7 @@ def refresh_knowledge_graph(book_id):
         'message': 'Please use GET request for streaming refresh, or use the web interface',
         'streaming_url': f'/api/knowledge-graph/{book_id}/refresh'
     })
+
 
 if __name__ == '__main__':
     print("🚀 Starting Multi-Book RAG Web Application...")
