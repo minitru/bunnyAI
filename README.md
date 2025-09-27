@@ -1,4 +1,4 @@
-# Multi-Book Enhanced RAG API - Literary Analysis
+# a Multi-Book Enhanced RAG API - Literary Analysis
 
 A sophisticated REST API for deep literary analysis of multiple books using ChromaDB and Claude 3.5 Sonnet. Query books individually or together with comprehensive context and professional literary analysis.
 
