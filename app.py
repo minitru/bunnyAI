@@ -31,6 +31,11 @@ def index():
     """Serve the main web interface"""
     return render_template('index.html')
 
+@app.route('/force-graph')
+def force_graph():
+    """Serve the force graph visualization page"""
+    return render_template('force_graph.html')
+
 @app.route('/api')
 def api_info():
     """API information endpoint"""
@@ -40,10 +45,17 @@ def api_info():
         'description': 'Literary analysis API for querying multiple books',
         'endpoints': {
             'GET /': 'Web interface',
+            'GET /force-graph': 'Force graph visualization page',
             'GET /api': 'API information',
             'GET /api/books': 'Get available books',
             'POST /api/query': 'Query books for literary analysis',
-            'GET /api/status': 'Get system status'
+            'GET /api/status': 'Get system status',
+            'GET /api/knowledge-graph/<book_id>': 'Get knowledge graph for a book',
+            'POST /api/knowledge-graph/<book_id>/refresh': 'Refresh knowledge graph with improved extraction',
+            'GET /api/force-graph/<book_id>': 'Get force graph data for visualization',
+            'GET /api/force-graph/combined': 'Get combined force graph for all books',
+            'POST /api/entities/search': 'Search entities in knowledge graph',
+            'GET /api/entities/<book_id>/<entity_id>/relationships': 'Get entity relationships'
         }
     })
 
@@ -171,6 +183,145 @@ def clear_conversation_memory():
         return jsonify({
             'success': True,
             'message': 'Conversation history cleared'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/knowledge-graph/<book_id>', methods=['GET'])
+def get_knowledge_graph(book_id):
+    """Get knowledge graph for a specific book"""
+    try:
+        rag = get_rag_instance()
+        kg_data = rag.get_knowledge_graph(book_id)
+        
+        if not kg_data:
+            return jsonify({
+                'success': False,
+                'error': f'No knowledge graph found for book {book_id}'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'knowledge_graph': kg_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/force-graph/<book_id>', methods=['GET'])
+def get_force_graph(book_id):
+    """Get force graph data for visualization"""
+    try:
+        rag = get_rag_instance()
+        force_graph_data = rag.get_force_graph_data(book_id)
+        
+        return jsonify({
+            'success': True,
+            'force_graph': force_graph_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/force-graph/combined', methods=['GET'])
+def get_combined_force_graph():
+    """Get combined force graph data for all books"""
+    try:
+        rag = get_rag_instance()
+        force_graph_data = rag.get_combined_force_graph_data()
+        
+        return jsonify({
+            'success': True,
+            'force_graph': force_graph_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/entities/search', methods=['POST'])
+def search_entities():
+    """Search for entities in the knowledge graph"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request body is required'
+            }), 400
+        
+        query = data.get('query', '').strip()
+        if not query:
+            return jsonify({
+                'success': False,
+                'error': 'Query is required'
+            }), 400
+        
+        book_id = data.get('book_id', None)
+        limit = data.get('limit', 10)
+        
+        rag = get_rag_instance()
+        entities = rag.search_entities(query, book_id, limit)
+        
+        return jsonify({
+            'success': True,
+            'entities': entities,
+            'query': query,
+            'book_id': book_id,
+            'count': len(entities)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/entities/<book_id>/<entity_id>/relationships', methods=['GET'])
+def get_entity_relationships(book_id, entity_id):
+    """Get all relationships for a specific entity"""
+    try:
+        rag = get_rag_instance()
+        relationships = rag.get_entity_relationships(entity_id, book_id)
+        
+        return jsonify({
+            'success': True,
+            'entity_id': entity_id,
+            'book_id': book_id,
+            'relationships': relationships,
+            'count': len(relationships)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/knowledge-graph/<book_id>/refresh', methods=['POST'])
+def refresh_knowledge_graph(book_id):
+    """Force refresh the knowledge graph with improved extraction"""
+    try:
+        rag = get_rag_instance()
+        kg_data = rag.refresh_knowledge_graph(book_id)
+        
+        if 'error' in kg_data:
+            return jsonify({
+                'success': False,
+                'error': kg_data['error']
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'knowledge_graph': kg_data,
+            'message': f'Knowledge graph refreshed for {book_id}'
         })
     except Exception as e:
         return jsonify({

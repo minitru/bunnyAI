@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Knowledge Graph - Force Graph Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        select, button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .graph-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            min-height: 600px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: #dc3545;
+        }
+        
+        .info-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .node {
+            cursor: pointer;
+        }
+        
+        .node circle {
+            stroke-width: 2px;
+        }
+        
+        .node text {
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            stroke-width: 2px;
+            transition: stroke-width 0.2s, stroke-opacity 0.2s;
+        }
+        
+        .link:hover {
+            stroke-opacity: 1;
+            stroke-width: 8px !important;
+            stroke: #ff6b6b;
+        }
+        
+        .tooltip {
+            position: absolute;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            pointer-events: none;
+            font-size: 12px;
+            max-width: 200px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Book Knowledge Graph Visualization</h1>
+        
+        <div class="controls">
+            <label for="bookSelect">Select Book:</label>
+            <select id="bookSelect">
+                <option value="">Loading books...</option>
+            </select>
+            
+            <button id="loadGraph" onclick="loadForceGraph()" disabled>Load Graph</button>
+            <button id="loadCombined" onclick="loadCombinedGraph()">Load All Books</button>
+            <button id="refreshGraph" onclick="refreshKnowledgeGraph()" disabled>Refresh KG</button>
+            <button id="resetView" onclick="resetView()">Reset View</button>
+        </div>
+        
+        <div class="graph-container" id="graphContainer">
+            <div class="loading">Select a book and click "Load Graph" to visualize the knowledge graph</div>
+        </div>
+        
+        <div class="info-panel" id="infoPanel" style="display: none;">
+            <h3>Graph Information</h3>
+            <div id="graphInfo"></div>
+        </div>
+        
+        <div class="info-panel" id="legendPanel">
+            <h3>📊 Connection Legend</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 6px; height: 2px; background: #999; border-radius: 1px;"></div>
+                    <span style="font-size: 12px;">Strong (0.8-1.0)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 4px; height: 2px; background: #999; border-radius: 1px;"></div>
+                    <span style="font-size: 12px;">Medium (0.5-0.8)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 2px; height: 2px; background: #999; border-radius: 1px;"></div>
+                    <span style="font-size: 12px;">Weak (0.0-0.5)</span>
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                💡 Hover over connections to see relationship strength and details
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+        let svg = null;
+        let simulation = null;
+        
+        // Load available books
+        async function loadBooks() {
+            try {
+                const response = await fetch('/api/books');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('bookSelect');
+                    select.innerHTML = '<option value="">Select a book...</option>';
+                    
+                    data.books.forEach(book => {
+                        const option = document.createElement('option');
+                        option.value = book.book_id;
+                        option.textContent = `${book.book_title} (${book.chunk_count} chunks)`;
+                        select.appendChild(option);
+                    });
+                    
+                    document.getElementById('loadGraph').disabled = false;
+                    document.getElementById('refreshGraph').disabled = false;
+                } else {
+                    throw new Error(data.error || 'Failed to load books');
+                }
+            } catch (error) {
+                console.error('Error loading books:', error);
+                document.getElementById('bookSelect').innerHTML = '<option value="">Error loading books</option>';
+            }
+        }
+        
+        // Load force graph for selected book
+        async function loadForceGraph() {
+            const bookId = document.getElementById('bookSelect').value;
+            if (!bookId) {
+                alert('Please select a book first');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/force-graph/${encodeURIComponent(bookId)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentData = data.force_graph;
+                    renderGraph(currentData);
+                    showInfo(currentData);
+                } else {
+                    showError(data.error || 'Failed to load force graph');
+                }
+            } catch (error) {
+                console.error('Error loading force graph:', error);
+                showError('Error loading force graph: ' + error.message);
+            }
+        }
+        
+        // Load combined force graph for all books
+        async function loadCombinedGraph() {
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/force-graph/combined');
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentData = data.force_graph;
+                    renderGraph(currentData);
+                    showInfo(currentData);
+                } else {
+                    showError(data.error || 'Failed to load combined force graph');
+                }
+            } catch (error) {
+                console.error('Error loading combined force graph:', error);
+                showError('Error loading combined force graph: ' + error.message);
+            }
+        }
+        
+        // Render the force graph
+        function renderGraph(data) {
+            const container = document.getElementById('graphContainer');
+            container.innerHTML = '';
+            
+            const width = container.clientWidth;
+            const height = 600;
+            
+            // Create SVG
+            svg = d3.select('#graphContainer')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Create tooltip
+            const tooltip = d3.select('body').append('div')
+                .attr('class', 'tooltip')
+                .style('opacity', 0);
+            
+            // Create simulation
+            simulation = d3.forceSimulation(data.nodes)
+                .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(30));
+            
+            // Create links with dynamic width based on connection strength
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(data.links)
+                .enter().append('line')
+                .attr('class', 'link')
+                .attr('stroke-width', d => {
+                    // Scale stroke width based on relationship strength
+                    // Strong relationships (0.8-1.0) get width 4-6
+                    // Medium relationships (0.5-0.8) get width 2-4
+                    // Weak relationships (0.0-0.5) get width 1-2
+                    const strength = d.strength || 0.5;
+                    return Math.max(1, strength * 6);
+                })
+                .attr('stroke-opacity', d => {
+                    // Also adjust opacity based on strength
+                    const strength = d.strength || 0.5;
+                    return Math.max(0.3, strength);
+                })
+                .on('mouseover', function(event, d) {
+                    tooltip.transition().duration(200).style('opacity', .9);
+                    tooltip.html(`
+                        <strong>${d.type}</strong><br/>
+                        Strength: ${(d.strength || 0.5).toFixed(2)}<br/>
+                        ${d.description || 'No description'}
+                    `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition().duration(500).style('opacity', 0);
+                });
+            
+            // Create nodes
+            const node = svg.append('g')
+                .selectAll('g')
+                .data(data.nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // Add circles to nodes
+            node.append('circle')
+                .attr('r', d => Math.sqrt(d.importance * 50) + 5)
+                .attr('fill', d => getNodeColor(d.type))
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2);
+            
+            // Add labels to nodes
+            node.append('text')
+                .text(d => d.name)
+                .attr('fill', '#333')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '.35em');
+            
+            // Add tooltips to nodes
+            node.on('mouseover', function(event, d) {
+                tooltip.transition().duration(200).style('opacity', .9);
+                tooltip.html(`
+                    <strong>${d.name}</strong><br/>
+                    Type: ${d.type}<br/>
+                    ${d.description || 'No description'}
+                `)
+                .style('left', (event.pageX + 10) + 'px')
+                .style('top', (event.pageY - 28) + 'px');
+            })
+            .on('mouseout', function() {
+                tooltip.transition().duration(500).style('opacity', 0);
+            });
+            
+            // Update positions on simulation tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+        }
+        
+        // Get node color based on type
+        function getNodeColor(type) {
+            const colors = {
+                'character': '#ff6b6b',
+                'place': '#4ecdc4',
+                'object': '#45b7d1',
+                'event': '#96ceb4',
+                'concept': '#feca57'
+            };
+            return colors[type] || '#95a5a6';
+        }
+        
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        // Refresh knowledge graph with improved extraction
+        async function refreshKnowledgeGraph() {
+            const bookId = document.getElementById('bookSelect').value;
+            if (!bookId) {
+                alert('Please select a book first');
+                return;
+            }
+            
+            if (!confirm('This will refresh the knowledge graph with improved extraction. This may take a few minutes. Continue?')) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/knowledge-graph/${encodeURIComponent(bookId)}/refresh`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload the force graph with new data
+                    await loadForceGraph();
+                    alert('Knowledge graph refreshed successfully! The graph now shows more comprehensive data.');
+                } else {
+                    showError(data.error || 'Failed to refresh knowledge graph');
+                }
+            } catch (error) {
+                console.error('Error refreshing knowledge graph:', error);
+                showError('Error refreshing knowledge graph: ' + error.message);
+            }
+        }
+        
+        // Reset view
+        function resetView() {
+            if (simulation) {
+                simulation.alpha(0.3).restart();
+            }
+        }
+        
+        // Show loading state
+        function showLoading() {
+            document.getElementById('graphContainer').innerHTML = '<div class="loading">Loading graph...</div>';
+            document.getElementById('infoPanel').style.display = 'none';
+        }
+        
+        // Show error state
+        function showError(message) {
+            document.getElementById('graphContainer').innerHTML = `<div class="error">Error: ${message}</div>`;
+            document.getElementById('infoPanel').style.display = 'none';
+        }
+        
+        // Show graph information
+        function showInfo(data) {
+            const infoPanel = document.getElementById('infoPanel');
+            const graphInfo = document.getElementById('graphInfo');
+            
+            const metadata = data.metadata || {};
+            const nodeCount = data.nodes ? data.nodes.length : 0;
+            const linkCount = data.links ? data.links.length : 0;
+            
+            graphInfo.innerHTML = `
+                <p><strong>Nodes:</strong> ${nodeCount}</p>
+                <p><strong>Links:</strong> ${linkCount}</p>
+                ${metadata.book_id ? `<p><strong>Book:</strong> ${metadata.book_id}</p>` : ''}
+                ${metadata.books ? `<p><strong>Books:</strong> ${metadata.books.join(', ')}</p>` : ''}
+            `;
+            
+            infoPanel.style.display = 'block';
+        }
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBooks();
+        });
+    </script>
+</body>
+</html>

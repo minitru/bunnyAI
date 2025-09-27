@@ -14,6 +14,7 @@ import pickle
 import hashlib
 from datetime import datetime, timedelta
 from collections import defaultdict
+from book_knowledge_graph import BookKnowledgeGraph
 
 class MultiBookAnalyzer:
     def __init__(self, openrouter_api_key: Optional[str] = None):
@@ -59,6 +60,9 @@ class MultiBookAnalyzer:
         
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Initialize knowledge graph system
+        self.knowledge_graph = BookKnowledgeGraph(self.chroma_client, api_key)
     
     def get_available_books(self) -> List[Dict[str, Any]]:
         """
@@ -190,21 +194,22 @@ class MultiBookAnalyzer:
         print(f"   Book: {book_title}")
         print(f"   Chunks: {len(chunks)}")
         
-        # Sample chunks for analysis (up to 200 chunks)
+        # Use ALL chunks for comprehensive entity extraction
         total_chunks = len(chunks)
-        sample_size = min(200, total_chunks)
+        sample_size = total_chunks  # Use ALL chunks for comprehensive extraction
         
         sample_chunks = []
         if total_chunks <= sample_size:
             sample_chunks = chunks
         else:
-            # Beginning (first 40%)
-            sample_chunks.extend(chunks[:total_chunks//2])
+            # Use more comprehensive sampling for better knowledge graph extraction
+            # Beginning (first 30%)
+            sample_chunks.extend(chunks[:total_chunks//3])
             # Middle (middle 40%)
-            middle_start = total_chunks//2 - total_chunks//5
+            middle_start = total_chunks//3
             sample_chunks.extend(chunks[middle_start:middle_start + total_chunks//2])
-            # End (last 40%)
-            sample_chunks.extend(chunks[-total_chunks//2:])
+            # End (last 30%)
+            sample_chunks.extend(chunks[-total_chunks//3:])
         
         # Create context for analysis
         context_parts = []
@@ -220,17 +225,25 @@ class MultiBookAnalyzer:
         # Perform analysis
         analysis = {}
         
-        # 1. Book Summary
+        # 1. Comprehensive Entity Extraction (NEW - Extract ALL entities first)
+        print(f"   🔍 Extracting all entities and relationships...")
+        comprehensive_entities = self.extract_comprehensive_entities(book_id, context)
+        
+        # 2. Book Summary (using extracted entities for context)
         print(f"   📖 Creating summary...")
-        analysis['book_summary'] = self.create_book_summary(book_title, context)
+        analysis['book_summary'] = self.create_book_summary(book_title, context, comprehensive_entities)
         
-        # 2. Character Analysis
+        # 3. Character Analysis (using extracted entities)
         print(f"   👥 Analyzing characters...")
-        analysis['character_analysis'] = self.analyze_characters(book_id, context)
+        analysis['character_analysis'] = self.analyze_characters(book_id, context, comprehensive_entities)
         
-        # 3. Plot Analysis
+        # 4. Plot Analysis (using extracted entities)
         print(f"   📚 Analyzing plot...")
-        analysis['plot_analysis'] = self.analyze_plot_and_conflicts(book_id, context)
+        analysis['plot_analysis'] = self.analyze_plot_and_conflicts(book_id, context, comprehensive_entities)
+        
+        # 5. Knowledge Graph (using comprehensive entities)
+        print(f"   🕸️ Building knowledge graph...")
+        analysis['knowledge_graph'] = self.build_knowledge_graph_from_entities(book_id, comprehensive_entities)
         
         # Cache the analysis
         cache_data = {
@@ -254,7 +267,7 @@ class MultiBookAnalyzer:
         
         return analysis
     
-    def create_book_summary(self, book_title: str, context: str) -> str:
+    def create_book_summary(self, book_title: str, context: str, entities_data: Optional[Dict[str, Any]] = None) -> str:
         """Create a comprehensive summary of a book"""
         summary_prompt = f"""Based on the following extensive excerpts from the book "{book_title}", create a comprehensive, detailed summary that includes:
 
@@ -297,7 +310,7 @@ Please provide an extremely detailed, comprehensive summary that captures the co
         except Exception as e:
             return f"Error creating summary: {e}"
     
-    def analyze_characters(self, book_id: str, context: str) -> str:
+    def analyze_characters(self, book_id: str, context: str, entities_data: Optional[Dict[str, Any]] = None) -> str:
         """Analyze characters in a book"""
         analysis_prompt = f"""Based on the following extensive content from the book, provide a comprehensive, detailed character analysis including:
 
@@ -370,7 +383,7 @@ Provide an extremely detailed, comprehensive character analysis that captures th
         except Exception as e:
             return f"Error analyzing characters: {e}"
     
-    def analyze_plot_and_conflicts(self, book_id: str, context: str) -> str:
+    def analyze_plot_and_conflicts(self, book_id: str, context: str, entities_data: Optional[Dict[str, Any]] = None) -> str:
         """Analyze plot and conflicts in a book"""
         analysis_prompt = f"""Based on the following content from the book, provide a comprehensive plot and conflict analysis including:
 
@@ -597,6 +610,195 @@ Provide a comprehensive comparative analysis that highlights both the individual
                 summary_parts.append("")
             
             return "\n".join(summary_parts)
+    
+    def get_knowledge_graph(self, book_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get knowledge graph for a specific book
+        
+        Args:
+            book_id: The book identifier
+            
+        Returns:
+            Knowledge graph data or None if not found
+        """
+        return self.knowledge_graph.get_knowledge_graph(book_id)
+    
+    def get_force_graph_data(self, book_id: str) -> Dict[str, Any]:
+        """
+        Get force graph data for visualization
+        
+        Args:
+            book_id: The book identifier
+            
+        Returns:
+            Force graph data in D3.js format
+        """
+        return self.knowledge_graph.get_force_graph_data(book_id)
+    
+    def get_combined_force_graph_data(self) -> Dict[str, Any]:
+        """
+        Get combined force graph data for all books
+        
+        Returns:
+            Combined force graph data in D3.js format
+        """
+        return self.knowledge_graph.get_combined_force_graph_data()
+    
+    def search_entities(self, query: str, book_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Search for entities in the knowledge graph
+        
+        Args:
+            query: Search query
+            book_id: Optional book ID to limit search
+            limit: Maximum number of results
+            
+        Returns:
+            List of matching entities
+        """
+        return self.knowledge_graph.search_entities(query, book_id, limit)
+    
+    def get_entity_relationships(self, entity_id: str, book_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all relationships for a specific entity
+        
+        Args:
+            entity_id: The entity identifier
+            book_id: The book identifier
+            
+        Returns:
+            List of relationships
+        """
+        return self.knowledge_graph.get_entity_relationships(entity_id, book_id)
+    
+    def refresh_knowledge_graph(self, book_id: str) -> Dict[str, Any]:
+        """
+        Force refresh the knowledge graph with comprehensive extraction
+        
+        Args:
+            book_id: The book identifier
+            
+        Returns:
+            Updated knowledge graph data
+        """
+        print(f"🔄 Refreshing knowledge graph for {book_id} with comprehensive extraction...")
+        
+        # Use the comprehensive analysis method
+        analysis = self.analyze_single_book(book_id, force_refresh=True)
+        
+        if 'error' in analysis:
+            return {'error': analysis['error']}
+        
+        return analysis.get('knowledge_graph', {'entities': {}, 'relationships': []})
+    
+    def extract_comprehensive_entities(self, book_id: str, context: str) -> Dict[str, Any]:
+        """
+        Extract ALL entities and relationships from the book content
+        This is the comprehensive pre-processing step
+        """
+        extraction_prompt = f"""You are an expert literary analyst. Extract EVERY SINGLE entity and relationship from this book content. Be extremely thorough - extract every character, place, object, event, and concept mentioned, no matter how minor.
+
+Return ONLY valid JSON with this exact structure:
+{{
+    "entities": {{
+        "entity_id": {{
+            "name": "Entity Name",
+            "type": "character|place|object|event|concept",
+            "description": "Detailed description",
+            "book_id": "{book_id}",
+            "importance": 0.8,
+            "mentions": ["quote1", "quote2"],
+            "first_mentioned": "context where first mentioned"
+        }}
+    }},
+    "relationships": [
+        {{
+            "from": "entity_id_1",
+            "to": "entity_id_2",
+            "type": "relationship_type",
+            "strength": 0.8,
+            "description": "How they are related",
+            "book_id": "{book_id}",
+            "evidence": "quote supporting this relationship"
+        }}
+    ]
+}}
+
+CRITICAL INSTRUCTIONS - BE EXTREMELY COMPREHENSIVE:
+- Extract EVERY character mentioned (main, minor, family, friends, strangers, animals, etc.)
+- Extract EVERY location (rooms, buildings, streets, cities, countries, natural features, etc.)
+- Extract EVERY object (furniture, tools, gifts, vehicles, clothing, food, etc.)
+- Extract EVERY event (meetings, conversations, actions, memories, dreams, etc.)
+- Extract EVERY concept (themes, ideas, emotions, states, etc.)
+- Include relationships like: family_of, friends_with, lives_in, works_at, owns, uses, caused_by, happened_at, met_at, talked_to, gave_to, received_from, loves, hates, fears, trusts, near, inside, outside, above, below, happened_before, happened_after, etc.
+- Use descriptive entity IDs (e.g., "wanda_character", "toy_box_object", "highway_place")
+- Set importance scores (0.0-1.0) based on centrality to story
+- Set relationship strength (0.0-1.0) based on importance
+- Include evidence quotes for relationships
+- Extract 100-200+ entities if possible (be extremely thorough)
+- Extract 200-400+ relationships if possible (include every connection)
+- Don't miss ANY character, no matter how minor
+- Don't miss ANY location, no matter how small
+- Don't miss ANY object, no matter how trivial
+- Don't miss ANY event, no matter how brief
+
+Book Content:
+{context[:30000]}  # Very large context for comprehensive extraction
+
+Return ONLY the JSON, no other text."""
+
+        try:
+            messages = [
+                {"role": "system", "content": "You are an expert at comprehensive entity extraction from literary texts. Extract EVERYTHING. Return only valid JSON."},
+                {"role": "user", "content": extraction_prompt}
+            ]
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=8000,  # Very large token limit for comprehensive extraction
+                temperature=self.temperature
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Clean up the response to extract JSON
+            if content.startswith('```json'):
+                content = content[7:]
+            if content.endswith('```'):
+                content = content[:-3]
+            
+            # Parse JSON
+            entities_data = json.loads(content)
+            
+            # Validate structure
+            if 'entities' not in entities_data or 'relationships' not in entities_data:
+                raise ValueError("Invalid entity extraction structure")
+            
+            entity_count = len(entities_data['entities'])
+            relationship_count = len(entities_data['relationships'])
+            print(f"   ✅ Extracted {entity_count} entities and {relationship_count} relationships")
+            
+            return entities_data
+            
+        except json.JSONDecodeError as e:
+            print(f"   ❌ JSON parsing error: {e}")
+            return {'entities': {}, 'relationships': []}
+        except Exception as e:
+            print(f"   ❌ Error extracting entities: {e}")
+            return {'entities': {}, 'relationships': []}
+    
+    def build_knowledge_graph_from_entities(self, book_id: str, entities_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Build knowledge graph from comprehensive entity extraction
+        """
+        if not entities_data or 'entities' not in entities_data:
+            return {'entities': {}, 'relationships': []}
+        
+        # Store entities in ChromaDB for semantic search
+        self.knowledge_graph._store_entities_in_chromadb(book_id, entities_data['entities'])
+        
+        return entities_data
 
 def main():
     """Main function to test multi-book analysis"""

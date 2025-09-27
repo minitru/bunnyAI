@@ -58,6 +58,8 @@ class MultiBookRAG:
         self.book_analyses = {}
         self.combined_analysis = None
         
+        # Knowledge graph functionality is now available through book_analyzer
+        
         # Initialize conversation memory
         self.conversation_history = []
         self.max_history_length = 10  # Keep last 10 exchanges
@@ -527,6 +529,30 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
             'book_knowledge_length': len(book_knowledge) if book_knowledge else 0,
             'books_searched': book_ids
         }
+    
+    def get_knowledge_graph(self, book_id: str) -> Optional[Dict[str, Any]]:
+        """Get knowledge graph for a specific book"""
+        return self.book_analyzer.get_knowledge_graph(book_id)
+    
+    def get_force_graph_data(self, book_id: str) -> Dict[str, Any]:
+        """Get force graph data for visualization"""
+        return self.book_analyzer.get_force_graph_data(book_id)
+    
+    def get_combined_force_graph_data(self) -> Dict[str, Any]:
+        """Get combined force graph data for all books"""
+        return self.book_analyzer.get_combined_force_graph_data()
+    
+    def search_entities(self, query: str, book_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search for entities in the knowledge graph"""
+        return self.book_analyzer.search_entities(query, book_id, limit)
+    
+    def get_entity_relationships(self, entity_id: str, book_id: str) -> List[Dict[str, Any]]:
+        """Get all relationships for a specific entity"""
+        return self.book_analyzer.get_entity_relationships(entity_id, book_id)
+    
+    def refresh_knowledge_graph(self, book_id: str) -> Dict[str, Any]:
+        """Force refresh the knowledge graph with improved extraction"""
+        return self.book_analyzer.refresh_knowledge_graph(book_id)
 
 def main():
     """Interactive CLI for Multi-Book Enhanced RAG"""
