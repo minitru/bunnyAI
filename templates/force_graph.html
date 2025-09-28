@@ -571,20 +571,26 @@
             };
         }
 
-        // Poll for refresh status updates
+
+        // Simple file-based status checking
         function pollRefreshStatus(bookId) {
-            console.log('Starting status polling for:', bookId);
+            console.log('Starting simple file-based status checking for:', bookId);
+            let pollCount = 0;
+            const maxPolls = 120; // 10 minutes max (120 * 5 seconds)
+            
             const pollInterval = setInterval(async () => {
+                pollCount++;
+                console.log(`Checking status file for: ${bookId} (check #${pollCount})`);
+                
                 try {
-                    console.log('Polling status for:', bookId);
                     const response = await fetch(`/api/knowledge-graph/${encodeURIComponent(bookId)}/status`);
                     const status = await response.json();
                     
-                    console.log('Status poll result:', status);
+                    console.log('Status check result:', status);
                     
+                    // If status is idle, the file doesn't exist - we're done!
                     if (status.status === 'idle') {
-                        // Refresh completed, stop polling
-                        console.log('Refresh completed, stopping polling');
+                        console.log('Status file gone - refresh completed!');
                         clearInterval(pollInterval);
                         hideLoading();
                         loadForceGraph();
@@ -597,27 +603,37 @@
                         return;
                     }
                     
-                    if (status.status === 'in_progress') {
-                        console.log('Updating progress:', status.message, status.progress + '%');
+                    // Check for timeout
+                    if (pollCount >= maxPolls) {
+                        console.log('Status checking timeout reached');
+                        clearInterval(pollInterval);
+                        hideLoading();
+                        showInfo('Refresh timed out - please try again');
+                        
+                        // Re-enable refresh button
+                        const refreshButton = document.getElementById('refreshGraph');
+                        refreshButton.disabled = false;
+                        refreshButton.textContent = 'Refresh KG';
+                        return;
+                    }
+                    
+                    // Update progress if file exists (refresh still in progress)
+                    if (status.status === 'in_progress' || status.status === 'processing' || status.status === 'starting') {
+                        console.log('Status file exists - refresh in progress:', status.message, status.progress + '%');
+                        
                         // Update progress display
                         const progressDetails = document.querySelector('.loading-details');
                         if (progressDetails) {
                             progressDetails.textContent = `${status.message} (${status.elapsed}s elapsed)`;
-                            console.log('Updated progress details:', progressDetails.textContent);
-                        } else {
-                            console.log('Progress details element not found');
                         }
                         
                         // Update progress bar
                         const progressBar = document.querySelector('.progress-fill');
                         if (progressBar && status.progress) {
                             progressBar.style.width = status.progress + '%';
-                            console.log('Updated progress bar to:', status.progress + '%');
-                        } else {
-                            console.log('Progress bar element not found or no progress value');
                         }
                         
-                        // Also update the progress text
+                        // Update progress text
                         const progressText = document.querySelector('.progress-text');
                         if (progressText) {
                             progressText.textContent = status.progress + '% complete';
@@ -625,7 +641,7 @@
                     }
                     
                 } catch (error) {
-                    console.error('Error polling status:', error);
+                    console.error('Error checking status:', error);
                     clearInterval(pollInterval);
                     hideLoading();
                     showInfo('Error checking refresh status: ' + error.message);
@@ -635,7 +651,7 @@
                     refreshButton.disabled = false;
                     refreshButton.textContent = 'Refresh KG';
                 }
-            }, 2000); // Poll every 2 seconds
+            }, 5000); // Check every 5 seconds
         }
 
         // Refresh knowledge graph with file-based status tracking
