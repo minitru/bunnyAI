@@ -10,24 +10,22 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background: #2c2c2c;
-            color: #ffffff;
+            background: #f5f5f5;
         }
         .container {
-            background: #3c3c3c;
+            background: white;
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
         .header h1 {
-            color: #f5f5f5;
+            color: #333;
             margin: 0;
             font-size: 2rem;
-            font-family: 'Courier New', monospace;
         }
         .query-box {
             margin-bottom: 20px;
@@ -272,7 +270,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Jessica's Crabby Editor</h1>
+            <h1>📝 Jessica's Crabby Editor</h1>
+            <p>Veteran Literary Editor • Sharp Analysis • No Nonsense</p>
         </div>
         
         <div class="query-box">
@@ -285,8 +284,18 @@
                     </select>
                 </div>
                 
+                <div class="model-selector">
+                    <label for="model-choice" class="form-label">AI Model:</label>
+                    <select id="model-choice" class="form-select">
+                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
+                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Balanced)</option>
+                        <option value="anthropic/claude-3-opus">Claude 3 Opus (Most Capable)</option>
+                        <option value="openai/gpt-4o">GPT-4o (Advanced Analysis)</option>
+                    </select>
+                </div>
+                
                 <div class="template-selector">
-                    <label for="template-choice" class="form-label">Common Queries:</label>
+                    <label for="template-choice" class="form-label">Quick Templates:</label>
                     <select id="template-choice" class="form-select">
                         <option value="">Choose a template...</option>
                         <option value="full-analysis">📊 Full Literary Analysis</option>
@@ -297,35 +306,34 @@
                         <option value="line-editing">📝 Line Editing & Grammar</option>
                     </select>
                 </div>
-                
-                <div class="model-selector">
-                    <label for="model-choice" class="form-label">AI Model:</label>
-                    <select id="model-choice" class="form-select">
-                        <option value="anthropic/claude-3.5-sonnet" selected>Claude 3.5 Sonnet (Balanced)</option>
-                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
-                        <option value="anthropic/claude-3-opus">Claude 3 Opus (Most Capable)</option>
-                        <option value="openai/gpt-4o">GPT-4o (Advanced Analysis)</option>
-                    </select>
-                </div>
             </div>
             
             <textarea 
                 id="question" 
                 class="query-input" 
-                placeholder="Ask me anything"
+                placeholder="Ask for comprehensive literary analysis, including:&#10;• Dialogue vs. narrative analysis&#10;• Sentence structure & readability&#10;• Language & content analysis&#10;• Plot & character development&#10;• Theme & pacing analysis&#10;• Writing quality assessment&#10;• Line editing (spelling, grammar, punctuation)&#10;&#10;Or ask any specific question about the books...&#10;&#10;Note: I'm a veteran editor with little patience for mediocrity.&#10;Bring your A-game or expect some sharp feedback."
                 rows="6"
             ></textarea>
             
             <div class="clearfix">
-                <button id="submit-btn" class="submit-btn">Ask</button>
+                <button id="submit-btn" class="submit-btn">What is it now?</button>
                 <button id="clear-memory-btn" class="clear-memory-btn">Clear Memory</button>
-                <button class="action-btn" id="force-graph-btn" onclick="window.open('/force-graph', '_blank')" style="background: #28a745; margin-left: 10px;">
-                    📊 View Book Graph
-                </button>
             </div>
         </div>
         
         
+        <div class="quick-actions">
+            <h3>🕸️ Knowledge Graph Visualization:</h3>
+            <div class="action-buttons">
+                <button class="action-btn" id="force-graph-btn" onclick="window.open('/force-graph', '_blank')" style="background: #28a745;">
+                    📊 View Force Graph
+                </button>
+                <button class="action-btn" data-query="Extract and show me the knowledge graph relationships between characters, places, and events in this book. Include relationship strengths and types.">Show KG Data</button>
+            </div>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                💡 The Force Graph shows interactive network visualizations of characters, places, and events with relationship strengths
+            </p>
+        </div>
         
         <div id="response" class="response" style="display: none;"></div>
     </div>
@@ -502,9 +510,7 @@
             
             setLoading(loading) {
                 this.submitBtn.disabled = loading;
-                this.submitBtn.textContent = loading ? '⏳ Processing...' : 'Ask';
-                this.submitBtn.style.background = loading ? '#ffc107' : '#007bff';
-                this.submitBtn.style.color = loading ? '#000' : '#fff';
+                this.submitBtn.textContent = loading ? 'Thinking...' : 'What is it now?';
             }
             
             showResponse(answer, modelUsed = null) {
