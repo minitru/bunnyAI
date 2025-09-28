@@ -205,6 +205,8 @@
             border-radius: 4px;
             border-left: 4px solid #007bff;
             color: #e0e0e0;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         
         .node {
@@ -283,7 +285,7 @@
             <!-- Node Size Legend -->
             <div style="margin-bottom: 15px;">
                 <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #888;">Node Size = Story Importance</h4>
-                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <div style="width: 25px; height: 25px; background: #ff6b6b; border-radius: 50%; border: 3px solid #333;"></div>
                         <span style="font-size: 12px;">High Importance (70%+)</span>
@@ -302,7 +304,7 @@
             <!-- Connection Strength Legend -->
             <div style="margin-bottom: 15px;">
                 <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #888;">Connection Thickness = Relationship Strength</h4>
-                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <div style="width: 6px; height: 2px; background: #999; border-radius: 1px;"></div>
                         <span style="font-size: 12px;">Strong (0.8-1.0)</span>
