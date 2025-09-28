@@ -362,19 +362,19 @@ def generate_refresh_stream(book_id):
         worker_thread.daemon = True  # Make it a daemon thread
         worker_thread.start()
         
-        # Send status messages every 30 seconds while waiting
+        # Send heartbeat every 10 seconds while waiting
         start_time = time.time()
-        last_status = start_time
+        last_heartbeat = start_time
         max_wait_time = 600  # 10 minutes max
         
         while worker_thread.is_alive() and (time.time() - start_time) < max_wait_time:
             current_time = time.time()
             
-            # Send status every 30 seconds
-            if current_time - last_status >= 30:
+            # Send heartbeat every 10 seconds
+            if current_time - last_heartbeat >= 10:
                 elapsed = int(current_time - start_time)
-                yield f"data: {json.dumps({'type': 'status', 'message': f'Processing... ({elapsed}s elapsed)', 'elapsed': elapsed})}\n\n"
-                last_status = current_time
+                yield f"data: {json.dumps({'type': 'heartbeat', 'message': f'Processing... ({elapsed}s elapsed)', 'elapsed': elapsed})}\n\n"
+                last_heartbeat = current_time
             
             time.sleep(1)  # Check every second
         
