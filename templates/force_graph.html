@@ -72,6 +72,9 @@
         .graph-controls {
             text-align: center;
             margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
         }
         
         .graph-controls button {
@@ -202,6 +205,7 @@
             font-weight: bold;
             text-anchor: middle;
             dominant-baseline: central;
+            fill: #e0e0e0 !important;
         }
         
         .link {
@@ -241,7 +245,6 @@
             </select>
             
             <button id="loadGraph" onclick="loadForceGraph()" disabled>Load Graph</button>
-            <button id="refreshGraph" onclick="refreshKnowledgeGraph()" disabled>Refresh KG</button>
         </div>
         
         
@@ -251,6 +254,7 @@
         
         <div class="graph-controls">
             <button id="resetView" onclick="resetView()">Reset View</button>
+            <button id="refreshGraph" onclick="refreshKnowledgeGraph()" disabled>Refresh KG</button>
         </div>
         
         <div class="info-panel" id="infoPanel" style="display: none;">
@@ -511,7 +515,7 @@
             // Add labels to nodes with adaptive sizing
             node.append('text')
                 .text(d => d.name)
-                .attr('fill', '#333')
+                .attr('fill', '#e0e0e0')
                 .attr('text-anchor', 'middle')
                 .attr('dy', '.35em')
                 .attr('font-size', d => {
@@ -839,14 +843,14 @@
                 const lowImportance = importances.filter(i => i < 0.4).length;
                 
                 importanceStats = `
-                    <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-                        <h4 style="margin: 0 0 8px 0; font-size: 14px;">📊 Importance Distribution</h4>
+                    <div style="margin-top: 15px; padding: 10px; background: #2a2a2a; border-radius: 4px; color: #e0e0e0;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #ffffff;">📊 Importance Distribution</h4>
                         <p style="margin: 2px 0; font-size: 12px;"><strong>Average:</strong> ${Math.round(avgImportance * 100)}%</p>
                         <p style="margin: 2px 0; font-size: 12px;"><strong>Range:</strong> ${Math.round(minImportance * 100)}% - ${Math.round(maxImportance * 100)}%</p>
                         <div style="display: flex; gap: 15px; margin-top: 8px;">
-                            <span style="font-size: 11px; color: #dc3545;">🔴 High: ${highImportance}</span>
-                            <span style="font-size: 11px; color: #ffc107;">🟡 Medium: ${mediumImportance}</span>
-                            <span style="font-size: 11px; color: #28a745;">🟢 Low: ${lowImportance}</span>
+                            <span style="font-size: 11px; color: #ff6b6b;">🔴 High: ${highImportance}</span>
+                            <span style="font-size: 11px; color: #ffd93d;">🟡 Medium: ${mediumImportance}</span>
+                            <span style="font-size: 11px; color: #6bcf7f;">🟢 Low: ${lowImportance}</span>
                         </div>
                     </div>
                 `;
