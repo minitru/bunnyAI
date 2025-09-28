@@ -606,6 +606,21 @@
                         return;
                     }
                     
+                    // Also check for any other completion status
+                    if (status.status === 'completed' || status.status === 'done' || status.status === 'finished') {
+                        console.log('REFRESH COMPLETED - stopping polling!');
+                        clearInterval(pollInterval);
+                        hideLoading();
+                        loadForceGraph();
+                        showInfo(`Knowledge graph refreshed successfully for ${bookId}!`);
+                        
+                        // Re-enable refresh button
+                        const refreshButton = document.getElementById('refreshGraph');
+                        refreshButton.disabled = false;
+                        refreshButton.textContent = 'Refresh KG';
+                        return;
+                    }
+                    
                     // Check for timeout
                     if (pollCount >= maxPolls) {
                         console.log('Status checking timeout reached');
