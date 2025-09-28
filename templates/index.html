@@ -284,18 +284,8 @@
                     </select>
                 </div>
                 
-                <div class="model-selector">
-                    <label for="model-choice" class="form-label">AI Model:</label>
-                    <select id="model-choice" class="form-select">
-                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
-                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Balanced)</option>
-                        <option value="anthropic/claude-3-opus">Claude 3 Opus (Most Capable)</option>
-                        <option value="openai/gpt-4o">GPT-4o (Advanced Analysis)</option>
-                    </select>
-                </div>
-                
                 <div class="template-selector">
-                    <label for="template-choice" class="form-label">Quick Templates:</label>
+                    <label for="template-choice" class="form-label">Common Queries:</label>
                     <select id="template-choice" class="form-select">
                         <option value="">Choose a template...</option>
                         <option value="full-analysis">📊 Full Literary Analysis</option>
@@ -306,34 +296,35 @@
                         <option value="line-editing">📝 Line Editing & Grammar</option>
                     </select>
                 </div>
+                
+                <div class="model-selector">
+                    <label for="model-choice" class="form-label">AI Model:</label>
+                    <select id="model-choice" class="form-select">
+                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Fast & Efficient)</option>
+                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Balanced)</option>
+                        <option value="anthropic/claude-3-opus">Claude 3 Opus (Most Capable)</option>
+                        <option value="openai/gpt-4o">GPT-4o (Advanced Analysis)</option>
+                    </select>
+                </div>
             </div>
             
             <textarea 
                 id="question" 
                 class="query-input" 
-                placeholder="Ask for comprehensive literary analysis, including:&#10;• Dialogue vs. narrative analysis&#10;• Sentence structure & readability&#10;• Language & content analysis&#10;• Plot & character development&#10;• Theme & pacing analysis&#10;• Writing quality assessment&#10;• Line editing (spelling, grammar, punctuation)&#10;&#10;Or ask any specific question about the books...&#10;&#10;Note: I'm a veteran editor with little patience for mediocrity.&#10;Bring your A-game or expect some sharp feedback."
+                placeholder="Ask me anything"
                 rows="6"
             ></textarea>
             
             <div class="clearfix">
-                <button id="submit-btn" class="submit-btn">What is it now?</button>
+                <button id="submit-btn" class="submit-btn">Ask</button>
                 <button id="clear-memory-btn" class="clear-memory-btn">Clear Memory</button>
-            </div>
-        </div>
-        
-        
-        <div class="quick-actions">
-            <h3>🕸️ Knowledge Graph Visualization:</h3>
-            <div class="action-buttons">
-                <button class="action-btn" id="force-graph-btn" onclick="window.open('/force-graph', '_blank')" style="background: #28a745;">
-                    📊 View Force Graph
+                <button class="action-btn" id="force-graph-btn" onclick="window.open('/force-graph', '_blank')" style="background: #28a745; margin-left: 10px;">
+                    📊 View Book Graph
                 </button>
-                <button class="action-btn" data-query="Extract and show me the knowledge graph relationships between characters, places, and events in this book. Include relationship strengths and types.">Show KG Data</button>
             </div>
-            <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                💡 The Force Graph shows interactive network visualizations of characters, places, and events with relationship strengths
-            </p>
         </div>
+        
+        
         
         <div id="response" class="response" style="display: none;"></div>
     </div>
@@ -510,7 +501,9 @@
             
             setLoading(loading) {
                 this.submitBtn.disabled = loading;
-                this.submitBtn.textContent = loading ? 'Thinking...' : 'What is it now?';
+                this.submitBtn.textContent = loading ? '⏳ Processing...' : 'Ask';
+                this.submitBtn.style.background = loading ? '#ffc107' : '#007bff';
+                this.submitBtn.style.color = loading ? '#000' : '#fff';
             }
             
             showResponse(answer, modelUsed = null) {
