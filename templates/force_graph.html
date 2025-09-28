@@ -574,8 +574,8 @@
                             if (progressDetails) {
                                 progressDetails.textContent = data.message;
                             }
-                        } else if (data.type === 'keepalive') {
-                            // Update keepalive message
+                        } else if (data.type === 'status') {
+                            // Update status message with elapsed time
                             const progressDetails = document.querySelector('.progress-details');
                             if (progressDetails) {
                                 progressDetails.textContent = data.message;
@@ -597,6 +597,11 @@
                             // Show success message
                             console.log('Showing success message...');
                             showInfo(`Knowledge graph refreshed successfully for ${bookId}!`);
+                            
+                        } else if (data.type === 'complete') {
+                            // Stream completion - ensure connection is closed
+                            console.log('Stream complete message received');
+                            eventSource.close();
                             
                         } else if (data.type === 'error') {
                             // Error - close the connection and show error
@@ -629,45 +634,6 @@
                     console.log('EventSource readyState:', eventSource.readyState);
                 };
                 
-                // Set a timeout for the entire operation (20 minutes)
-                const timeoutId = setTimeout(() => {
-                    if (eventSource.readyState !== EventSource.CLOSED) {
-                        console.log('Timeout reached, closing EventSource');
-                        eventSource.close();
-                        hideLoading();
-                        showError('Knowledge graph refresh timed out after 20 minutes');
-                    }
-                }, 20 * 60 * 1000);
-                
-                // Add a fallback check - if we don't receive success message, check server status
-                const fallbackTimeout = setTimeout(() => {
-                    if (eventSource.readyState !== EventSource.CLOSED) {
-                        console.log('Fallback: Checking if refresh completed...');
-                        // Check if the refresh actually completed by trying to load the graph
-                        fetch(`/api/force-graph/${encodeURIComponent(bookId)}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data && data.nodes && data.nodes.length > 0) {
-                                    console.log('Fallback: Refresh completed, reloading graph');
-                                    eventSource.close();
-                                    hideLoading();
-                                    loadForceGraph();
-                                    showInfo(`Knowledge graph refreshed successfully for ${bookId}! (Fallback detection)`);
-                                }
-                            })
-                            .catch(err => {
-                                console.log('Fallback: Could not verify completion');
-                            });
-                    }
-                }, 5 * 60 * 1000); // 5 minutes after server completion
-                
-                // Clear timeouts when connection closes normally
-                const originalClose = eventSource.close;
-                eventSource.close = function() {
-                    clearTimeout(timeoutId);
-                    clearTimeout(fallbackTimeout);
-                    originalClose.call(this);
-                };
                 
                 // The success case is handled in the onmessage handler above
                 return; // Exit early since we're using streaming

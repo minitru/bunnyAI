@@ -362,19 +362,19 @@ def generate_refresh_stream(book_id):
         worker_thread.daemon = True  # Make it a daemon thread
         worker_thread.start()
         
-        # Send keepalive messages every 30 seconds while waiting
+        # Send status messages every 30 seconds while waiting
         start_time = time.time()
-        last_keepalive = start_time
+        last_status = start_time
         max_wait_time = 600  # 10 minutes max
         
         while worker_thread.is_alive() and (time.time() - start_time) < max_wait_time:
             current_time = time.time()
             
-            # Send keepalive every 30 seconds
-            if current_time - last_keepalive >= 30:
+            # Send status every 30 seconds
+            if current_time - last_status >= 30:
                 elapsed = int(current_time - start_time)
-                yield f"data: {json.dumps({'type': 'keepalive', 'message': f'Still processing... ({elapsed}s elapsed)'})}\n\n"
-                last_keepalive = current_time
+                yield f"data: {json.dumps({'type': 'status', 'message': f'Processing... ({elapsed}s elapsed)', 'elapsed': elapsed})}\n\n"
+                last_status = current_time
             
             time.sleep(1)  # Check every second
         
@@ -405,6 +405,8 @@ def generate_refresh_stream(book_id):
                 print(f"✅ Success message: {success_msg}")
                 yield f"data: {success_msg}\n\n"
                 print(f"✅ Success message yielded for {book_id}")
+                # Ensure the stream is properly closed
+                yield f"data: {json.dumps({'type': 'complete'})}\n\n"
         else:
             print(f"❌ No result for {book_id}")
             yield f"data: {json.dumps({'type': 'error', 'error': 'No result returned from refresh operation'})}\n\n"
