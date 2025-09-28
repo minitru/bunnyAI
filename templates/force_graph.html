@@ -236,7 +236,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>📚 Book Knowledge Graph Visualization</h1>
+        <h1>Crabby Graph</h1>
         
         <div class="controls">
             <label for="bookSelect">Select Book:</label>
@@ -244,7 +244,6 @@
                 <option value="">Loading books...</option>
             </select>
             
-            <button id="loadGraph" onclick="loadForceGraph()" disabled>Load Graph</button>
         </div>
         
         
@@ -877,14 +876,12 @@
             document.getElementById('bookSelect').addEventListener('change', function() {
                 const bookId = this.value;
                 if (bookId) {
-                    // Enable buttons when a book is selected
-                    document.getElementById('loadGraph').disabled = false;
+                    // Enable refresh button when a book is selected
                     document.getElementById('refreshGraph').disabled = false;
                     // Automatically load the graph when a book is selected
                     loadForceGraph();
                 } else {
-                    // Disable buttons when no book is selected
-                    document.getElementById('loadGraph').disabled = true;
+                    // Disable refresh button when no book is selected
                     document.getElementById('refreshGraph').disabled = true;
                 }
             });
