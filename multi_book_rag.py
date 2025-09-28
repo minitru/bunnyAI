@@ -47,8 +47,8 @@ class MultiBookRAG:
         )
         
         # Configuration
-        self.model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
-        self.max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "4000"))
+        self.model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+        self.max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "8000"))
         self.temperature = float(os.getenv("OPENROUTER_TEMPERATURE", "0.3"))
         self.force_json = os.getenv("OPENROUTER_FORCE_JSON", "1") == "1"
         self.question_final_grace_ms = int(os.getenv("QUESTION_FINAL_GRACE_MS", "1200"))
