@@ -200,43 +200,36 @@
             text-align: center;
             font-weight: 500;
         }
-        .clearfix::after {
-            content: "";
-            display: table;
-            clear: both;
+        .ask-button-container {
+            text-align: right;
+            margin-bottom: 15px;
         }
         
-        .clearfix {
+        .action-buttons-container {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
         }
         
-        .graph-button-container {
-            margin-top: 10px;
-            text-align: center;
+        .action-buttons-container .action-btn {
+            flex: 1;
+            max-width: 200px;
         }
         
         @media (max-width: 768px) {
-            .clearfix {
+            .ask-button-container {
+                text-align: center;
+                margin-bottom: 10px;
+            }
+            
+            .action-buttons-container {
                 flex-direction: column;
-                gap: 8px;
-                align-items: stretch;
+                gap: 10px;
             }
             
-            .clearfix button {
+            .action-buttons-container .action-btn {
                 width: 100%;
-                margin: 0 !important;
-            }
-            
-            .graph-button-container {
-                margin-top: 8px;
-            }
-            
-            .graph-button-container .action-btn {
-                width: 100%;
+                max-width: none;
             }
         }
         .selector-row {
@@ -332,7 +325,7 @@
                 <div class="template-selector">
                     <label for="template-choice" class="form-label">Common Queries:</label>
                     <select id="template-choice" class="form-select">
-                        <option value="">Choose a template...</option>
+                        <option value="">Standard queries...</option>
                         <option value="full-analysis">📊 Full Literary Analysis</option>
                         <option value="writing-style">✍️ Writing Style & Structure</option>
                         <option value="content-review">🔍 Content Review & Language</option>
@@ -360,12 +353,12 @@
                 rows="6"
             ></textarea>
             
-            <div class="clearfix">
+            <div class="ask-button-container">
                 <button id="submit-btn" class="submit-btn">Ask</button>
-                <button id="clear-memory-btn" class="clear-memory-btn">Clear Memory</button>
             </div>
             
-            <div class="graph-button-container">
+            <div class="action-buttons-container">
+                <button id="clear-memory-btn" class="action-btn">Clear Memory</button>
                 <button class="action-btn" id="force-graph-btn" onclick="window.open('/force-graph', '_blank')" style="background: #28a745;">
                     📊 View Book Graph
                 </button>
