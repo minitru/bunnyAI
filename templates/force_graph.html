@@ -573,8 +573,10 @@
 
         // Poll for refresh status updates
         function pollRefreshStatus(bookId) {
+            console.log('Starting status polling for:', bookId);
             const pollInterval = setInterval(async () => {
                 try {
+                    console.log('Polling status for:', bookId);
                     const response = await fetch(`/api/knowledge-graph/${encodeURIComponent(bookId)}/status`);
                     const status = await response.json();
                     
@@ -582,6 +584,7 @@
                     
                     if (status.status === 'idle') {
                         // Refresh completed, stop polling
+                        console.log('Refresh completed, stopping polling');
                         clearInterval(pollInterval);
                         hideLoading();
                         loadForceGraph();
@@ -595,16 +598,29 @@
                     }
                     
                     if (status.status === 'in_progress') {
+                        console.log('Updating progress:', status.message, status.progress + '%');
                         // Update progress display
-                        const progressDetails = document.querySelector('.progress-details');
+                        const progressDetails = document.querySelector('.loading-details');
                         if (progressDetails) {
                             progressDetails.textContent = `${status.message} (${status.elapsed}s elapsed)`;
+                            console.log('Updated progress details:', progressDetails.textContent);
+                        } else {
+                            console.log('Progress details element not found');
                         }
                         
                         // Update progress bar
-                        const progressBar = document.querySelector('.progress-bar');
+                        const progressBar = document.querySelector('.progress-fill');
                         if (progressBar && status.progress) {
                             progressBar.style.width = status.progress + '%';
+                            console.log('Updated progress bar to:', status.progress + '%');
+                        } else {
+                            console.log('Progress bar element not found or no progress value');
+                        }
+                        
+                        // Also update the progress text
+                        const progressText = document.querySelector('.progress-text');
+                        if (progressText) {
+                            progressText.textContent = status.progress + '% complete';
                         }
                     }
                     
@@ -666,7 +682,9 @@
                 }
                 
                 // Start polling for status updates
+                console.log('About to start polling for bookId:', bookId);
                 pollRefreshStatus(bookId);
+                console.log('Polling started');
                 
                 // File-based polling handles all the status updates
             } catch (error) {
