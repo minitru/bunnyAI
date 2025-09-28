@@ -236,7 +236,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Crabby Graph</h1>
+        <h1>Jessica's Book Graph</h1>
         
         <div class="controls">
             <label for="bookSelect">Select Book:</label>
@@ -266,7 +266,7 @@
             
             <!-- Node Size Legend -->
             <div style="margin-bottom: 15px;">
-                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #333;">Node Size = Story Importance</h4>
+                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #888;">Node Size = Story Importance</h4>
                 <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <div style="width: 25px; height: 25px; background: #ff6b6b; border-radius: 50%; border: 3px solid #333;"></div>
@@ -285,7 +285,7 @@
             
             <!-- Connection Strength Legend -->
             <div style="margin-bottom: 15px;">
-                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #333;">Connection Thickness = Relationship Strength</h4>
+                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #888;">Connection Thickness = Relationship Strength</h4>
                 <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <div style="width: 6px; height: 2px; background: #999; border-radius: 1px;"></div>
@@ -330,7 +330,6 @@
                         select.appendChild(option);
                     });
                     
-                    document.getElementById('loadGraph').disabled = false;
                     document.getElementById('refreshGraph').disabled = false;
                 } else {
                     throw new Error(data.error || 'Failed to load books');
