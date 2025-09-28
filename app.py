@@ -473,7 +473,13 @@ def get_refresh_status(book_id):
     """Get the current refresh status for a book"""
     status_data = read_status_file(book_id)
     if status_data:
-        # Return the exact contents of the status file
+        # Add elapsed time to the status data
+        current_time = time.time()
+        file_timestamp = status_data.get('timestamp', current_time)
+        elapsed = int(current_time - file_timestamp)
+        status_data['elapsed'] = elapsed
+        
+        # Return the status file contents with elapsed time
         return jsonify(status_data)
     else:
         return jsonify({
