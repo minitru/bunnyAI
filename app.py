@@ -515,7 +515,11 @@ def refresh_knowledge_graph_file_based(book_id):
     """Start knowledge graph refresh using file-based status tracking"""
     print(f"🔄 Starting file-based knowledge graph refresh for: {book_id}")
     
-    # Check if refresh is already in progress
+    # Clean up any old status files first
+    remove_status_file(book_id)
+    print(f"🧹 Cleaned up any old status files for {book_id}")
+    
+    # Check if refresh is already in progress (should be none after cleanup)
     existing_status = read_status_file(book_id)
     if existing_status:
         return jsonify({
