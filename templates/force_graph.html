@@ -589,25 +589,22 @@
                     const response = await fetch(`/api/knowledge-graph/${encodeURIComponent(bookId)}/status`);
                     const status = await response.json();
                     
-                    console.log('Status check result:', status);
+                    console.log('Status file contents:', status);
                     
-                    // If status is idle, the file doesn't exist - we're done!
-                    if (status.status === 'idle') {
-                        console.log('STATUS FILE NOT DETECTED - refresh completed!');
-                        clearInterval(pollInterval);
-                        hideLoading();
-                        loadForceGraph();
-                        showInfo(`Knowledge graph refreshed successfully for ${bookId}!`);
-                        
-                        // Re-enable refresh button
-                        const refreshButton = document.getElementById('refreshGraph');
-                        refreshButton.disabled = false;
-                        refreshButton.textContent = 'Refresh KG';
-                        return;
+                    // Display the status file contents in the browser
+                    const progressDetails = document.querySelector('.loading-details');
+                    if (progressDetails) {
+                        progressDetails.innerHTML = `
+                            <strong>Status File Contents:</strong><br>
+                            Status: ${status.status}<br>
+                            Message: ${status.message}<br>
+                            Progress: ${status.progress}%<br>
+                            Elapsed: ${status.elapsed || 'N/A'}s
+                        `;
                     }
                     
-                    // Also check for any other completion status
-                    if (status.status === 'completed' || status.status === 'done' || status.status === 'finished') {
+                    // Check for completion - if status is idle, done, or completed
+                    if (status.status === 'idle' || status.status === 'done' || status.status === 'completed') {
                         console.log('REFRESH COMPLETED - stopping polling!');
                         clearInterval(pollInterval);
                         hideLoading();
@@ -635,23 +632,13 @@
                         return;
                     }
                     
-                    // Update progress if file exists (refresh still in progress)
-                    if (status.status === 'in_progress' || status.status === 'processing' || status.status === 'starting') {
-                        console.log('STATUS FILE DETECTED - refresh in progress:', status.message, status.progress + '%');
-                        
-                        // Update progress display
-                        const progressDetails = document.querySelector('.loading-details');
-                        if (progressDetails) {
-                            progressDetails.textContent = `${status.message} (${status.elapsed}s elapsed)`;
-                        }
-                        
-                        // Update progress bar
+                    // Update progress bar if we have progress data
+                    if (status.progress) {
                         const progressBar = document.querySelector('.progress-fill');
-                        if (progressBar && status.progress) {
+                        if (progressBar) {
                             progressBar.style.width = status.progress + '%';
                         }
                         
-                        // Update progress text
                         const progressText = document.querySelector('.progress-text');
                         if (progressText) {
                             progressText.textContent = status.progress + '% complete';
@@ -750,6 +737,12 @@
             `;
             document.getElementById('graphContainer').innerHTML = loadingHtml;
             document.getElementById('infoPanel').style.display = 'none';
+        }
+        
+        // Hide loading state
+        function hideLoading() {
+            document.getElementById('graphContainer').innerHTML = '<div class="loading">Select a book and click "Load Graph" to visualize the knowledge graph</div>';
+            document.getElementById('infoPanel').style.display = 'block';
         }
         
         // Show loading state with progress bar
