@@ -198,6 +198,7 @@
             
             <button id="loadGraph" onclick="loadForceGraph()" disabled>Load Graph</button>
             <button id="refreshGraph" onclick="refreshKnowledgeGraph()" disabled>Refresh KG</button>
+            <button id="testSSE" onclick="testEventSource()" style="margin-left: 10px;">Test EventSource</button>
             <button id="resetView" onclick="resetView()">Reset View</button>
         </div>
         
@@ -530,7 +531,98 @@
             d.fy = null;
         }
         
-        // Refresh knowledge graph with improved extraction
+        // Test EventSource functionality
+        function testEventSource() {
+            console.log('Testing EventSource...');
+            showLoading('Testing EventSource', 'Connecting to test endpoint...');
+            
+            const eventSource = new EventSource('/api/test-sse');
+            
+            eventSource.onopen = function(event) {
+                console.log('Test EventSource connection opened');
+                const progressDetails = document.querySelector('.progress-details');
+                if (progressDetails) {
+                    progressDetails.textContent = 'Test EventSource connected - waiting for messages...';
+                }
+            };
+            
+            eventSource.onmessage = function(event) {
+                console.log('Test SSE message received:', event.data);
+                const data = JSON.parse(event.data);
+                console.log('Test parsed data:', data);
+                
+                const progressDetails = document.querySelector('.progress-details');
+                if (progressDetails) {
+                    progressDetails.textContent = `Test message: ${data.message}`;
+                }
+                
+                if (data.type === 'test' && data.message.includes('Test message 3')) {
+                    eventSource.close();
+                    hideLoading();
+                    showInfo('EventSource test completed successfully!');
+                }
+            };
+            
+            eventSource.onerror = function(event) {
+                console.error('Test EventSource error:', event);
+                eventSource.close();
+                hideLoading();
+                showInfo('EventSource test failed - check console for details');
+            };
+        }
+
+        // Poll for refresh status updates
+        function pollRefreshStatus(bookId) {
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/knowledge-graph/${encodeURIComponent(bookId)}/status`);
+                    const status = await response.json();
+                    
+                    console.log('Status poll result:', status);
+                    
+                    if (status.status === 'idle') {
+                        // Refresh completed, stop polling
+                        clearInterval(pollInterval);
+                        hideLoading();
+                        loadForceGraph();
+                        showInfo(`Knowledge graph refreshed successfully for ${bookId}!`);
+                        
+                        // Re-enable refresh button
+                        const refreshButton = document.getElementById('refreshGraph');
+                        refreshButton.disabled = false;
+                        refreshButton.textContent = 'Refresh KG';
+                        return;
+                    }
+                    
+                    if (status.status === 'in_progress') {
+                        // Update progress display
+                        const progressDetails = document.querySelector('.progress-details');
+                        if (progressDetails) {
+                            progressDetails.textContent = `${status.message} (${status.elapsed}s elapsed)`;
+                        }
+                        
+                        // Update progress bar
+                        const progressBar = document.querySelector('.progress-bar');
+                        if (progressBar && status.progress) {
+                            progressBar.style.width = status.progress + '%';
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Error polling status:', error);
+                    clearInterval(pollInterval);
+                    hideLoading();
+                    showInfo('Error checking refresh status: ' + error.message);
+                    
+                    // Re-enable refresh button
+                    const refreshButton = document.getElementById('refreshGraph');
+                    refreshButton.disabled = false;
+                    refreshButton.textContent = 'Refresh KG';
+                }
+            }, 2000); // Poll every 2 seconds
+        }
+
+        // Refresh knowledge graph with file-based status tracking
         async function refreshKnowledgeGraph() {
             const bookId = document.getElementById('bookSelect').value;
             if (!bookId) {
@@ -542,15 +634,12 @@
                 return;
             }
             
-            // Show detailed loading state for refresh with progress simulation
+            // Show detailed loading state for refresh
             showLoadingWithProgress(
                 'Starting Knowledge Graph Regeneration...', 
                 'This may take 2-5 minutes. Please wait while we extract comprehensive entities and relationships.',
                 0
             );
-            
-            // Start progress simulation
-            simulateProgress();
             
             // Disable the refresh button to prevent multiple requests
             const refreshButton = document.getElementById('refreshGraph');
@@ -559,107 +648,27 @@
             refreshButton.textContent = 'Regenerating...';
             
             try {
-                // Use EventSource for streaming response with keepalive
-                const eventSource = new EventSource(`/api/knowledge-graph/${encodeURIComponent(bookId)}/refresh`);
+                // Start the refresh using file-based approach
+                const url = `/api/knowledge-graph/${encodeURIComponent(bookId)}/refresh`;
+                console.log('Starting refresh with URL:', url);
                 
-                eventSource.onmessage = function(event) {
-                    try {
-                        console.log('SSE message received:', event.data);
-                        const data = JSON.parse(event.data);
-                        console.log('Parsed SSE data:', data);
-                        
-                        if (data.type === 'progress') {
-                            // Update progress message
-                            const progressDetails = document.querySelector('.progress-details');
-                            if (progressDetails) {
-                                progressDetails.textContent = data.message;
-                            }
-                        } else if (data.type === 'heartbeat') {
-                            // Update heartbeat message with elapsed time
-                            const progressDetails = document.querySelector('.progress-details');
-                            if (progressDetails) {
-                                progressDetails.textContent = data.message;
-                                console.log('Updated progress details:', data.message);
-                            } else {
-                                console.log('Progress details element not found');
-                            }
-                            
-                            // Update progress bar based on elapsed time (max 10 minutes = 600 seconds)
-                            const progressBar = document.querySelector('.progress-bar');
-                            if (progressBar) {
-                                const elapsed = data.elapsed || 0;
-                                const maxTime = 600; // 10 minutes
-                                const progress = Math.min((elapsed / maxTime) * 100, 95); // Cap at 95% until completion
-                                progressBar.style.width = progress + '%';
-                                console.log('Updated progress bar:', progress + '%');
-                            }
-                            
-                            console.log('Heartbeat received:', data.message);
-                        } else if (data.type === 'success') {
-                            // Success - close the connection and reload the graph
-                            console.log('Success message received, closing connection');
-                            console.log('EventSource readyState before close:', eventSource.readyState);
-                            
-                            // Set progress bar to 100%
-                            const progressBar = document.querySelector('.progress-bar');
-                            if (progressBar) {
-                                progressBar.style.width = '100%';
-                                console.log('Set progress bar to 100%');
-                            }
-                            
-                            eventSource.close();
-                            
-                            // Hide loading first
-                            console.log('Hiding loading...');
-                            hideLoading();
-                            
-                            // Reload the graph
-                            console.log('Reloading force graph...');
-                            loadForceGraph();
-                            
-                            // Show success message
-                            console.log('Showing success message...');
-                            showInfo(`Knowledge graph refreshed successfully for ${bookId}!`);
-                            
-                        } else if (data.type === 'complete') {
-                            // Stream completion - ensure connection is closed
-                            console.log('Stream complete message received');
-                            eventSource.close();
-                            
-                        } else if (data.type === 'error') {
-                            // Error - close the connection and show error
-                            console.log('Error message received:', data.error);
-                            eventSource.close();
-                            hideLoading();
-                            throw new Error(data.error);
-                        } else {
-                            console.log('Unknown message type:', data.type);
-                        }
-                    } catch (parseError) {
-                        console.error('Error parsing SSE data:', parseError);
-                        console.error('Raw event data:', event.data);
-                        eventSource.close();
-                        hideLoading();
-                        throw new Error('Invalid response format from server');
-                    }
-                };
+                const response = await fetch(url);
+                const result = await response.json();
                 
-                eventSource.onerror = function(event) {
-                    console.error('EventSource error:', event);
-                    console.error('EventSource readyState:', eventSource.readyState);
-                    eventSource.close();
-                    hideLoading();
-                    throw new Error('Connection error during knowledge graph refresh');
-                };
+                if (result.error) {
+                    throw new Error(result.error);
+                }
                 
-                eventSource.onopen = function(event) {
-                    console.log('EventSource connection opened');
-                    console.log('EventSource readyState:', eventSource.readyState);
-                };
+                if (result.status === 'already_running') {
+                    console.log('Refresh already running, starting polling...');
+                } else {
+                    console.log('Refresh started, beginning polling...');
+                }
                 
+                // Start polling for status updates
+                pollRefreshStatus(bookId);
                 
-                // The success case is handled in the onmessage handler above
-                return; // Exit early since we're using streaming
+                // File-based polling handles all the status updates
             } catch (error) {
                 console.error('Error refreshing knowledge graph:', error);
                 showError('Error refreshing knowledge graph: ' + error.message);

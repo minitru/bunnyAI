@@ -321,6 +321,57 @@ def refresh_knowledge_graph_worker(rag, book_id, progress_callback=None):
         
         return {'error': error_msg}
 
+def get_status_file_path(book_id):
+    """Get the path for the status file for a given book"""
+    return f"cache/refresh_status_{book_id.replace(' ', '_').replace('&', 'and')}.json"
+
+def write_status_file(book_id, status_data):
+    """Write status data to file with timestamp"""
+    status_file = get_status_file_path(book_id)
+    try:
+        # Add timestamp to status data
+        status_data['timestamp'] = time.time()
+        with open(status_file, 'w') as f:
+            json.dump(status_data, f)
+        print(f"📝 Status written to {status_file}: {status_data}")
+    except Exception as e:
+        print(f"❌ Error writing status file {status_file}: {e}")
+
+def remove_status_file(book_id):
+    """Remove the status file for a given book"""
+    status_file = get_status_file_path(book_id)
+    try:
+        if os.path.exists(status_file):
+            os.remove(status_file)
+            print(f"🗑️ Removed status file: {status_file}")
+    except Exception as e:
+        print(f"❌ Error removing status file {status_file}: {e}")
+
+def read_status_file(book_id):
+    """Read status file and check if it's stale (older than 20 minutes)"""
+    status_file = get_status_file_path(book_id)
+    try:
+        if not os.path.exists(status_file):
+            return None
+        
+        with open(status_file, 'r') as f:
+            status_data = json.load(f)
+        
+        # Check if file is older than 20 minutes (1200 seconds)
+        current_time = time.time()
+        file_timestamp = status_data.get('timestamp', 0)
+        age_seconds = current_time - file_timestamp
+        
+        if age_seconds > 1200:  # 20 minutes
+            print(f"⏰ Status file {status_file} is stale ({age_seconds:.0f}s old), removing")
+            remove_status_file(book_id)
+            return None
+        
+        return status_data
+    except Exception as e:
+        print(f"❌ Error reading status file {status_file}: {e}")
+        return None
+
 def generate_refresh_stream(book_id):
     """Generate streaming response with keepalive for knowledge graph refresh"""
     def progress_callback(message):
@@ -417,23 +468,130 @@ def generate_refresh_stream(book_id):
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error', 'error': f'Failed to refresh knowledge graph: {str(e)}'})}\n\n"
 
-@app.route('/api/knowledge-graph/<book_id>/refresh', methods=['GET'])
-def refresh_knowledge_graph_stream(book_id):
-    """Force refresh the knowledge graph with streaming keepalive (GET for EventSource)"""
-    print(f"🔄 Starting streaming knowledge graph refresh for: {book_id}")
+@app.route('/api/knowledge-graph/<book_id>/status', methods=['GET'])
+def get_refresh_status(book_id):
+    """Get the current refresh status for a book"""
+    status_data = read_status_file(book_id)
+    if status_data:
+        return jsonify({
+            'status': 'in_progress',
+            'message': status_data.get('message', 'Processing...'),
+            'progress': status_data.get('progress', 0),
+            'elapsed': int(time.time() - status_data.get('timestamp', time.time()))
+        })
+    else:
+        return jsonify({
+            'status': 'idle',
+            'message': 'No refresh in progress'
+        })
+
+@app.route('/api/test-sse', methods=['GET'])
+def test_sse():
+    """Test endpoint for EventSource"""
+    def generate_test_stream():
+        yield f"data: {json.dumps({'type': 'test', 'message': 'Test message 1'})}\n\n"
+        import time
+        time.sleep(2)
+        yield f"data: {json.dumps({'type': 'test', 'message': 'Test message 2'})}\n\n"
+        time.sleep(2)
+        yield f"data: {json.dumps({'type': 'test', 'message': 'Test message 3'})}\n\n"
     
-    # Return streaming response with keepalive
     return Response(
-        generate_refresh_stream(book_id),
+        generate_test_stream(),
         mimetype='text/event-stream',
         headers={
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Headers': 'Cache-Control',
-            'X-Accel-Buffering': 'no'  # Disable nginx buffering
+            'X-Accel-Buffering': 'no'
         }
     )
+
+@app.route('/api/knowledge-graph/<book_id>/refresh', methods=['GET'])
+def refresh_knowledge_graph_file_based(book_id):
+    """Start knowledge graph refresh using file-based status tracking"""
+    print(f"🔄 Starting file-based knowledge graph refresh for: {book_id}")
+    
+    # Check if refresh is already in progress
+    existing_status = read_status_file(book_id)
+    if existing_status:
+        return jsonify({
+            'status': 'already_running',
+            'message': 'Refresh already in progress',
+            'elapsed': int(time.time() - existing_status.get('timestamp', time.time()))
+        })
+    
+    # Validate book_id
+    if not book_id or not isinstance(book_id, str):
+        return jsonify({'error': 'Invalid book_id provided'}), 400
+    
+    # Start the refresh in a background thread
+    def refresh_worker():
+        try:
+            print(f"🔄 Background refresh worker starting for: {book_id}")
+            
+            # Write initial status
+            write_status_file(book_id, {
+                'status': 'starting',
+                'message': 'Initializing knowledge graph refresh...',
+                'progress': 0
+            })
+            
+            rag = get_rag_instance()
+            print(f"✅ RAG instance obtained for {book_id}")
+            
+            # Update status
+            write_status_file(book_id, {
+                'status': 'processing',
+                'message': 'Extracting entities and relationships...',
+                'progress': 25
+            })
+            
+            # Perform the refresh
+            result = rag.refresh_knowledge_graph(book_id)
+            
+            # Check result
+            if isinstance(result, dict) and 'error' in result:
+                write_status_file(book_id, {
+                    'status': 'error',
+                    'message': f"Error: {result['error']}",
+                    'progress': 100
+                })
+                print(f"❌ Refresh failed for {book_id}: {result['error']}")
+            else:
+                write_status_file(book_id, {
+                    'status': 'completed',
+                    'message': 'Knowledge graph refresh completed successfully!',
+                    'progress': 100
+                })
+                print(f"✅ Refresh completed for {book_id}")
+            
+            # Remove status file after a short delay to allow frontend to read final status
+            time.sleep(2)
+            remove_status_file(book_id)
+            
+        except Exception as e:
+            print(f"❌ Error in refresh worker for {book_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            write_status_file(book_id, {
+                'status': 'error',
+                'message': f"Error: {str(e)}",
+                'progress': 100
+            })
+            time.sleep(2)
+            remove_status_file(book_id)
+    
+    # Start the worker thread
+    worker_thread = threading.Thread(target=refresh_worker)
+    worker_thread.daemon = True
+    worker_thread.start()
+    
+    return jsonify({
+        'status': 'started',
+        'message': 'Knowledge graph refresh started in background'
+    })
 
 @app.route('/api/knowledge-graph/<book_id>/refresh', methods=['POST'])
 def refresh_knowledge_graph(book_id):
