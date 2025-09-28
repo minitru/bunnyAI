@@ -402,18 +402,18 @@
             }
             
             // Create SVG
-            svg = d3.select('#graphContainer')
+            window.svg = d3.select('#graphContainer')
                 .append('svg')
                 .attr('width', width)
                 .attr('height', height)
                 .call(d3.zoom()
                     .scaleExtent([0.1, 4])
                     .on('zoom', (event) => {
-                        container.attr('transform', event.transform);
+                        svgContainer.attr('transform', event.transform);
                     }));
             
             // Create a container for all graph elements
-            const container = svg.append('g');
+            const svgContainer = svg.append('g');
             
             // Create tooltip
             const tooltip = d3.select('body').append('div')
@@ -428,7 +428,7 @@
                 .force('collision', d3.forceCollide().radius(30));
             
             // Create links with dynamic width based on connection strength
-            const link = container.append('g')
+            const link = svgContainer.append('g')
                 .selectAll('line')
                 .data(validLinks)
                 .enter().append('line')
@@ -461,7 +461,7 @@
                 });
             
             // Create nodes
-            const node = container.append('g')
+            const node = svgContainer.append('g')
                 .selectAll('g')
                 .data(data.nodes)
                 .enter().append('g')
@@ -902,26 +902,26 @@
         
         function setupZoomControls() {
             document.getElementById('zoomIn').addEventListener('click', function() {
-                if (svg) {
-                    svg.transition().duration(300).call(
+                if (window.svg) {
+                    window.svg.transition().duration(300).call(
                         d3.zoom().transform,
-                        d3.zoomTransform(svg.node()).scale(1.2)
+                        d3.zoomTransform(window.svg.node()).scale(1.2)
                     );
                 }
             });
             
             document.getElementById('zoomOut').addEventListener('click', function() {
-                if (svg) {
-                    svg.transition().duration(300).call(
+                if (window.svg) {
+                    window.svg.transition().duration(300).call(
                         d3.zoom().transform,
-                        d3.zoomTransform(svg.node()).scale(0.8)
+                        d3.zoomTransform(window.svg.node()).scale(0.8)
                     );
                 }
             });
             
             document.getElementById('resetZoom').addEventListener('click', function() {
-                if (svg) {
-                    svg.transition().duration(300).call(
+                if (window.svg) {
+                    window.svg.transition().duration(300).call(
                         d3.zoom().transform,
                         d3.zoomIdentity
                     );
