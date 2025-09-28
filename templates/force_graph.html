@@ -575,12 +575,14 @@
 
         // Simple file-based status checking
         function pollRefreshStatus(bookId) {
+            console.log('=== POLLING FUNCTION CALLED ===');
             console.log('Starting simple file-based status checking for:', bookId);
             let pollCount = 0;
             const maxPolls = 120; // 10 minutes max (120 * 5 seconds)
             
             const pollInterval = setInterval(async () => {
                 pollCount++;
+                console.log(`=== POLLING CHECK #${pollCount} ===`);
                 console.log(`Checking status file for: ${bookId} (check #${pollCount})`);
                 
                 try {
@@ -700,8 +702,9 @@
                 
                 // Start polling for status updates
                 console.log('About to start polling for bookId:', bookId);
+                console.log('Calling pollRefreshStatus function...');
                 pollRefreshStatus(bookId);
-                console.log('Polling started');
+                console.log('Polling function called - should be running now');
                 
                 // File-based polling handles all the status updates
             } catch (error) {
