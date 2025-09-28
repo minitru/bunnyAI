@@ -64,6 +64,48 @@
             border-radius: 4px;
             background: white;
             min-height: 600px;
+            cursor: grab;
+        }
+        
+        .graph-container:active {
+            cursor: grabbing;
+        }
+        
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+        
+        .zoom-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .zoom-btn:hover {
+            background: #0056b3;
+        }
+        
+        @media (max-width: 768px) {
+            .graph-container {
+                min-height: 400px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .controls select, .controls button {
+                width: 100%;
+                margin-bottom: 5px;
+            }
         }
         
         .loading {
@@ -201,6 +243,12 @@
             <button id="testSSE" onclick="testEventSource()" style="margin-left: 10px;">Test EventSource</button>
             <button id="debugStatus" onclick="debugStatus()" style="margin-left: 10px;">Debug Status</button>
             <button id="resetView" onclick="resetView()">Reset View</button>
+        </div>
+        
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="zoomIn">🔍+ Zoom In</button>
+            <button class="zoom-btn" id="zoomOut">🔍- Zoom Out</button>
+            <button class="zoom-btn" id="resetZoom">🎯 Reset View</button>
         </div>
         
         <div class="graph-container" id="graphContainer">
@@ -357,7 +405,15 @@
             svg = d3.select('#graphContainer')
                 .append('svg')
                 .attr('width', width)
-                .attr('height', height);
+                .attr('height', height)
+                .call(d3.zoom()
+                    .scaleExtent([0.1, 4])
+                    .on('zoom', (event) => {
+                        container.attr('transform', event.transform);
+                    }));
+            
+            // Create a container for all graph elements
+            const container = svg.append('g');
             
             // Create tooltip
             const tooltip = d3.select('body').append('div')
@@ -372,7 +428,7 @@
                 .force('collision', d3.forceCollide().radius(30));
             
             // Create links with dynamic width based on connection strength
-            const link = svg.append('g')
+            const link = container.append('g')
                 .selectAll('line')
                 .data(validLinks)
                 .enter().append('line')
@@ -405,7 +461,7 @@
                 });
             
             // Create nodes
-            const node = svg.append('g')
+            const node = container.append('g')
                 .selectAll('g')
                 .data(data.nodes)
                 .enter().append('g')
@@ -841,8 +897,41 @@
         }
         
         // Initialize the page
+        // Zoom functionality
+        let currentZoom = d3.zoomIdentity;
+        
+        function setupZoomControls() {
+            document.getElementById('zoomIn').addEventListener('click', function() {
+                if (svg) {
+                    svg.transition().duration(300).call(
+                        d3.zoom().transform,
+                        d3.zoomTransform(svg.node()).scale(1.2)
+                    );
+                }
+            });
+            
+            document.getElementById('zoomOut').addEventListener('click', function() {
+                if (svg) {
+                    svg.transition().duration(300).call(
+                        d3.zoom().transform,
+                        d3.zoomTransform(svg.node()).scale(0.8)
+                    );
+                }
+            });
+            
+            document.getElementById('resetZoom').addEventListener('click', function() {
+                if (svg) {
+                    svg.transition().duration(300).call(
+                        d3.zoom().transform,
+                        d3.zoomIdentity
+                    );
+                }
+            });
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             loadBooks();
+            setupZoomControls();
         });
     </script>
 </body>
