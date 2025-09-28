@@ -346,12 +346,16 @@ def generate_refresh_stream(book_id):
         
         def refresh_worker():
             try:
-                result_container['result'] = rag.refresh_knowledge_graph(book_id)
+                print(f"🔄 Worker thread starting for {book_id}")
+                result = rag.refresh_knowledge_graph(book_id)
+                print(f"✅ Worker thread completed for {book_id}, result type: {type(result)}")
+                result_container['result'] = result
+                print(f"✅ Result container set for {book_id}")
             except Exception as e:
-                result_container['error'] = str(e)
                 print(f"❌ Error in refresh worker for {book_id}: {e}")
                 import traceback
                 traceback.print_exc()
+                result_container['error'] = str(e)
         
         # Start the worker thread
         worker_thread = threading.Thread(target=refresh_worker)
@@ -397,7 +401,10 @@ def generate_refresh_stream(book_id):
             else:
                 # Success - send a simple success message
                 print(f"✅ Sending success response for {book_id}")
-                yield f"data: {json.dumps({'type': 'success', 'message': 'Knowledge graph refresh completed successfully'})}\n\n"
+                success_msg = json.dumps({'type': 'success', 'message': 'Knowledge graph refresh completed successfully'})
+                print(f"✅ Success message: {success_msg}")
+                yield f"data: {success_msg}\n\n"
+                print(f"✅ Success message yielded for {book_id}")
         else:
             print(f"❌ No result for {book_id}")
             yield f"data: {json.dumps({'type': 'error', 'error': 'No result returned from refresh operation'})}\n\n"
@@ -421,7 +428,8 @@ def refresh_knowledge_graph_stream(book_id):
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Cache-Control'
+            'Access-Control-Allow-Headers': 'Cache-Control',
+            'X-Accel-Buffering': 'no'  # Disable nginx buffering
         }
     )
 
@@ -436,6 +444,7 @@ def refresh_knowledge_graph(book_id):
         'message': 'Please use GET request for streaming refresh, or use the web interface',
         'streaming_url': f'/api/knowledge-graph/{book_id}/refresh'
     })
+
 
 
 if __name__ == '__main__':
