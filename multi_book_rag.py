@@ -306,7 +306,7 @@ class MultiBookRAG:
                     summaries.append(f"=== {book_title} ===\n{summary}\n")
             return "\n".join(summaries)
     
-    def generate_response(self, query: str, context: str, book_knowledge: str = "", book_ids: Optional[List[str]] = None, model: str = 'openai/gpt-4o-mini') -> str:
+    def generate_response(self, query: str, context: str, book_knowledge: str = "", book_ids: Optional[List[str]] = None, model: str = 'anthropic/claude-3.5-sonnet') -> str:
         """
         Generate response with book knowledge integration
         
@@ -482,7 +482,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
         except Exception as e:
             return f"Error generating response: {e}"
     
-    def query(self, question: str, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True, model: str = 'openai/gpt-4o-mini') -> Dict[str, Any]:
+    def query(self, question: str, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:
         """
         Main query method with book knowledge integration
         
@@ -534,29 +534,56 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
         if book_knowledge:
             print(f"🧠 Using comprehensive book knowledge ({len(book_knowledge)} characters)")
         
-        print(f"🤖 Generating response with {self.model}...")
+        print(f"🤖 Generating response with {model}...")
         
         # Add grace period
         if self.question_final_grace_ms > 0:
             time.sleep(self.question_final_grace_ms / 1000.0)
         
         # Generate response
-        answer = self.generate_response(question, context, book_knowledge, book_ids, model)
-        
-        # Add to conversation history
-        book_context_str = ', '.join([book['book_title'] for book in available_books if book['book_id'] in book_ids]) if book_ids else "All Books"
-        self.add_to_conversation_history(question, answer, book_context_str)
-        
-        return {
-            'answer': answer,
-            'chunks_used': n_results,
-            'context': context,
-            'book_knowledge_used': bool(book_knowledge),
-            'model_used': model,
-            'context_length': len(context),
-            'book_knowledge_length': len(book_knowledge) if book_knowledge else 0,
-            'books_searched': book_ids
-        }
+        try:
+            answer = self.generate_response(question, context, book_knowledge, book_ids, model)
+            
+            # Check if answer is an error message
+            if answer.startswith("Error generating response:"):
+                return {
+                    'answer': answer,
+                    'chunks_used': n_results,
+                    'context': context,
+                    'book_knowledge_used': bool(book_knowledge),
+                    'model_used': model,
+                    'context_length': len(context),
+                    'book_knowledge_length': len(book_knowledge) if book_knowledge else 0,
+                    'books_searched': book_ids,
+                    'error': True
+                }
+            
+            # Add to conversation history
+            book_context_str = ', '.join([book['book_title'] for book in available_books if book['book_id'] in book_ids]) if book_ids else "All Books"
+            self.add_to_conversation_history(question, answer, book_context_str)
+            
+            return {
+                'answer': answer,
+                'chunks_used': n_results,
+                'context': context,
+                'book_knowledge_used': bool(book_knowledge),
+                'model_used': model,
+                'context_length': len(context),
+                'book_knowledge_length': len(book_knowledge) if book_knowledge else 0,
+                'books_searched': book_ids
+            }
+        except Exception as e:
+            return {
+                'answer': f"Error in query processing: {str(e)}",
+                'chunks_used': n_results,
+                'context': context,
+                'book_knowledge_used': bool(book_knowledge),
+                'model_used': model,
+                'context_length': len(context),
+                'book_knowledge_length': len(book_knowledge) if book_knowledge else 0,
+                'books_searched': book_ids,
+                'error': True
+            }
     
     def get_knowledge_graph(self, book_id: str) -> Optional[Dict[str, Any]]:
         """Get knowledge graph for a specific book"""
