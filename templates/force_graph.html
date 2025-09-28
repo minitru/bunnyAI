@@ -199,6 +199,7 @@
             <button id="loadGraph" onclick="loadForceGraph()" disabled>Load Graph</button>
             <button id="refreshGraph" onclick="refreshKnowledgeGraph()" disabled>Refresh KG</button>
             <button id="testSSE" onclick="testEventSource()" style="margin-left: 10px;">Test EventSource</button>
+            <button id="debugStatus" onclick="debugStatus()" style="margin-left: 10px;">Debug Status</button>
             <button id="resetView" onclick="resetView()">Reset View</button>
         </div>
         
@@ -590,7 +591,7 @@
                     
                     // If status is idle, the file doesn't exist - we're done!
                     if (status.status === 'idle') {
-                        console.log('Status file gone - refresh completed!');
+                        console.log('STATUS FILE NOT DETECTED - refresh completed!');
                         clearInterval(pollInterval);
                         hideLoading();
                         loadForceGraph();
@@ -619,7 +620,7 @@
                     
                     // Update progress if file exists (refresh still in progress)
                     if (status.status === 'in_progress' || status.status === 'processing' || status.status === 'starting') {
-                        console.log('Status file exists - refresh in progress:', status.message, status.progress + '%');
+                        console.log('STATUS FILE DETECTED - refresh in progress:', status.message, status.progress + '%');
                         
                         // Update progress display
                         const progressDetails = document.querySelector('.loading-details');
