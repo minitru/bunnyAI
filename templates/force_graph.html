@@ -10,22 +10,24 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #2c2c2c;
+            color: #ffffff;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
+            background: #3c3c3c;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             padding: 20px;
         }
         
         h1 {
             text-align: center;
-            color: #333;
+            color: #f5f5f5;
             margin-bottom: 30px;
+            font-family: 'Courier New', monospace;
         }
         
         .controls {
@@ -60,37 +62,36 @@
         }
         
         .graph-container {
-            border: 1px solid #ddd;
+            border: 1px solid #555;
             border-radius: 4px;
-            background: white;
+            background: #1a1a1a;
             min-height: 600px;
             cursor: grab;
+        }
+        
+        .graph-controls {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .graph-controls button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .graph-controls button:hover {
+            background: #0056b3;
         }
         
         .graph-container:active {
             cursor: grabbing;
         }
         
-        .zoom-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            justify-content: center;
-        }
-        
-        .zoom-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .zoom-btn:hover {
-            background: #0056b3;
-        }
         
         @media (max-width: 768px) {
             .graph-container {
@@ -182,9 +183,10 @@
         .info-panel {
             margin-top: 20px;
             padding: 15px;
-            background-color: #f8f9fa;
+            background-color: #1a1a1a;
             border-radius: 4px;
             border-left: 4px solid #007bff;
+            color: #e0e0e0;
         }
         
         .node {
@@ -240,19 +242,15 @@
             
             <button id="loadGraph" onclick="loadForceGraph()" disabled>Load Graph</button>
             <button id="refreshGraph" onclick="refreshKnowledgeGraph()" disabled>Refresh KG</button>
-            <button id="testSSE" onclick="testEventSource()" style="margin-left: 10px;">Test EventSource</button>
-            <button id="debugStatus" onclick="debugStatus()" style="margin-left: 10px;">Debug Status</button>
-            <button id="resetView" onclick="resetView()">Reset View</button>
         </div>
         
-        <div class="zoom-controls">
-            <button class="zoom-btn" id="zoomIn">🔍+ Zoom In</button>
-            <button class="zoom-btn" id="zoomOut">🔍- Zoom Out</button>
-            <button class="zoom-btn" id="resetZoom">🎯 Reset View</button>
-        </div>
         
         <div class="graph-container" id="graphContainer">
-            <div class="loading">Select a book and click "Load Graph" to visualize the knowledge graph</div>
+            <div class="loading">Select a book to automatically load the knowledge graph</div>
+        </div>
+        
+        <div class="graph-controls">
+            <button id="resetView" onclick="resetView()">Reset View</button>
         </div>
         
         <div class="info-panel" id="infoPanel" style="display: none;">
@@ -430,8 +428,10 @@
             simulation = d3.forceSimulation(data.nodes)
                 .force('link', d3.forceLink(validLinks).id(d => d.id).distance(100))
                 .force('charge', d3.forceManyBody().strength(-300))
-                .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(30));
+                .force('center', d3.forceCenter(width / 2, height / 2).strength(0.3))
+                .force('collision', d3.forceCollide().radius(30))
+                .force('x', d3.forceX(width / 2).strength(0.1))
+                .force('y', d3.forceY(height / 2).strength(0.1));
             
             // Create links with dynamic width based on connection strength
             const link = svgContainer.append('g')
@@ -594,45 +594,6 @@
             d.fy = null;
         }
         
-        // Test EventSource functionality
-        function testEventSource() {
-            console.log('Testing EventSource...');
-            showLoading('Testing EventSource', 'Connecting to test endpoint...');
-            
-            const eventSource = new EventSource('/api/test-sse');
-            
-            eventSource.onopen = function(event) {
-                console.log('Test EventSource connection opened');
-                const progressDetails = document.querySelector('.progress-details');
-                if (progressDetails) {
-                    progressDetails.textContent = 'Test EventSource connected - waiting for messages...';
-                }
-            };
-            
-            eventSource.onmessage = function(event) {
-                console.log('Test SSE message received:', event.data);
-                const data = JSON.parse(event.data);
-                console.log('Test parsed data:', data);
-                
-                const progressDetails = document.querySelector('.progress-details');
-                if (progressDetails) {
-                    progressDetails.textContent = `Test message: ${data.message}`;
-                }
-                
-                if (data.type === 'test' && data.message.includes('Test message 3')) {
-                    eventSource.close();
-                    hideLoading();
-                    showInfo('EventSource test completed successfully!');
-                }
-            };
-            
-            eventSource.onerror = function(event) {
-                console.error('Test EventSource error:', event);
-                eventSource.close();
-                hideLoading();
-                showInfo('EventSource test failed - check console for details');
-            };
-        }
 
 
         // Simple file-based status checking
@@ -903,49 +864,20 @@
         }
         
         // Initialize the page
-        // Zoom functionality
-        let currentZoom = d3.zoomIdentity;
         
-        function setupZoomControls() {
-            document.getElementById('zoomIn').addEventListener('click', function() {
-                if (window.svg) {
-                    window.svg.transition().duration(300).call(
-                        d3.zoom().transform,
-                        d3.zoomTransform(window.svg.node()).scale(1.2)
-                    );
-                }
-            });
-            
-            document.getElementById('zoomOut').addEventListener('click', function() {
-                if (window.svg) {
-                    window.svg.transition().duration(300).call(
-                        d3.zoom().transform,
-                        d3.zoomTransform(window.svg.node()).scale(0.8)
-                    );
-                }
-            });
-            
-            document.getElementById('resetZoom').addEventListener('click', function() {
-                if (window.svg) {
-                    window.svg.transition().duration(300).call(
-                        d3.zoom().transform,
-                        d3.zoomIdentity
-                    );
-                }
-            });
-        }
         
         document.addEventListener('DOMContentLoaded', function() {
             loadBooks();
-            setupZoomControls();
             
-            // Add event listener for book selection
+            // Add event listener for book selection - auto-load graph
             document.getElementById('bookSelect').addEventListener('change', function() {
                 const bookId = this.value;
                 if (bookId) {
                     // Enable buttons when a book is selected
                     document.getElementById('loadGraph').disabled = false;
                     document.getElementById('refreshGraph').disabled = false;
+                    // Automatically load the graph when a book is selected
+                    loadForceGraph();
                 } else {
                     // Disable buttons when no book is selected
                     document.getElementById('loadGraph').disabled = true;
