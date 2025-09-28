@@ -119,7 +119,7 @@ def query_books():
         
         # Optional parameters with defaults
         book_id = data.get('book', None)  # None means all books
-        model = data.get('model', 'openai/gpt-4o-mini')  # Default model
+        model = data.get('model', 'anthropic/claude-3.5-sonnet')  # Default model
         n_results = data.get('context_chunks', 80)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
