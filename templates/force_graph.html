@@ -932,6 +932,20 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadBooks();
             setupZoomControls();
+            
+            // Add event listener for book selection
+            document.getElementById('bookSelect').addEventListener('change', function() {
+                const bookId = this.value;
+                if (bookId) {
+                    // Enable buttons when a book is selected
+                    document.getElementById('loadGraph').disabled = false;
+                    document.getElementById('refreshGraph').disabled = false;
+                } else {
+                    // Disable buttons when no book is selected
+                    document.getElementById('loadGraph').disabled = true;
+                    document.getElementById('refreshGraph').disabled = true;
+                }
+            });
         });
     </script>
 </body>
