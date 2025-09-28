@@ -381,7 +381,6 @@
             const width = container.clientWidth || 800;
             const height = 600;
             
-            console.log('Container dimensions:', { width, height });
             
             // Validate data structure
             if (!data || !data.nodes || !data.links) {
@@ -409,11 +408,7 @@
             }
             
             // Create SVG
-            const d3Container = d3.select('#graphContainer');
-            console.log('D3 container selection:', d3Container);
-            console.log('Container node:', d3Container.node());
-            
-            window.svg = d3Container
+            window.svg = d3.select('#graphContainer')
                 .append('svg')
                 .attr('width', width)
                 .attr('height', height)
@@ -424,7 +419,7 @@
                     }));
             
             // Create a container for all graph elements
-            const svgContainer = svg.append('g');
+            const svgContainer = window.svg.append('g');
             
             // Create tooltip
             const tooltip = d3.select('body').append('div')
