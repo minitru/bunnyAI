@@ -304,6 +304,128 @@
                 width: 100%;
             }
         }
+        
+        /* Draft Section Styles */
+        .draft-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        
+        .draft-section h3 {
+            margin: 0 0 15px 0;
+            color: #f5f5f5;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .draft-upload-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .draft-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #555;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #ffffff;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .draft-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .draft-input::placeholder {
+            color: #888;
+        }
+        
+        .draft-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .draft-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        
+        .upload-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .upload-btn:hover:not(:disabled) {
+            background: #218838;
+        }
+        
+        .clear-btn {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .clear-btn:hover:not(:disabled) {
+            background: #c82333;
+        }
+        
+        .draft-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .draft-status {
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .draft-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .draft-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .draft-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        @media (max-width: 768px) {
+            .draft-buttons {
+                flex-direction: column;
+            }
+            
+            .draft-btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -362,6 +484,25 @@
                 <button class="action-btn" id="force-graph-btn" onclick="window.open('/force-graph', '_blank')" style="background: #28a745;">
                     📊 View Book Graph
                 </button>
+            </div>
+            
+            <!-- Draft Upload Section -->
+            <div class="draft-section">
+                <h3>📝 Draft Content Management</h3>
+                <div class="draft-upload-container">
+                    <label for="draft-content" class="form-label">Upload Draft Content:</label>
+                    <textarea 
+                        id="draft-content" 
+                        class="draft-input" 
+                        placeholder="Paste your draft content here for analysis alongside your books..."
+                        rows="4"
+                    ></textarea>
+                    <div class="draft-buttons">
+                        <button id="upload-draft-btn" class="draft-btn upload-btn">📤 Upload Draft</button>
+                        <button id="clear-draft-btn" class="draft-btn clear-btn" disabled>🗑️ Clear Draft</button>
+                    </div>
+                    <div id="draft-status" class="draft-status" style="display: none;"></div>
+                </div>
             </div>
         </div>
         
@@ -424,6 +565,13 @@
                 this.templateChoice = document.getElementById('template-choice');
                 this.clearMemoryBtn = document.getElementById('clear-memory-btn');
                 
+                // Draft management elements
+                this.draftContent = document.getElementById('draft-content');
+                this.uploadDraftBtn = document.getElementById('upload-draft-btn');
+                this.clearDraftBtn = document.getElementById('clear-draft-btn');
+                this.draftStatus = document.getElementById('draft-status');
+                this.currentSessionId = null;
+                
                 // Template queries mapping
                 this.templateQueries = {
                     'full-analysis': 'Provide a comprehensive literary analysis including dialogue vs. narrative usage, sentence stats, language analysis, plot structure, character development, themes, and writing quality assessment. Be thorough and don\'t hold back on criticism.',
@@ -477,6 +625,10 @@
                 this.submitBtn.addEventListener('click', () => this.submitQuery());
                 this.clearMemoryBtn.addEventListener('click', () => this.clearMemory());
                 
+                // Draft management event listeners
+                this.uploadDraftBtn.addEventListener('click', () => this.uploadDraft());
+                this.clearDraftBtn.addEventListener('click', () => this.clearDraft());
+                
                 this.questionInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -517,7 +669,13 @@
                         requestBody.book = selectedBook;
                     }
                     
-                    const response = await fetch('/api/query', {
+                    // Use draft query endpoint if we have an active session
+                    const endpoint = this.currentSessionId ? '/api/draft/query' : '/api/query';
+                    if (this.currentSessionId) {
+                        requestBody.session_id = this.currentSessionId;
+                    }
+                    
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -528,7 +686,12 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        this.showResponse(data.answer, data.model_used);
+                        // Show indicator if draft content was included
+                        let modelUsed = data.model_used;
+                        if (data.draft_included) {
+                            modelUsed = modelUsed + ' (with draft context)';
+                        }
+                        this.showResponse(data.answer, modelUsed);
                     } else {
                         this.showError('Query failed: ' + data.error);
                     }
@@ -615,6 +778,100 @@
             
             hideResponse() {
                 this.responseDiv.style.display = 'none';
+            }
+            
+            async uploadDraft() {
+                const content = this.draftContent.value.trim();
+                
+                if (!content) {
+                    this.showDraftStatus('Please enter some draft content to upload.', 'error');
+                    return;
+                }
+                
+                try {
+                    this.uploadDraftBtn.disabled = true;
+                    this.uploadDraftBtn.textContent = 'Uploading...';
+                    
+                    const response = await fetch('/api/draft/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            content: content,
+                            metadata: {
+                                uploaded_at: new Date().toISOString(),
+                                content_length: content.length
+                            }
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.currentSessionId = data.session_id;
+                        this.clearDraftBtn.disabled = false;
+                        this.showDraftStatus(`✅ Draft uploaded successfully! (${data.content_length} characters)`, 'success');
+                    } else {
+                        this.showDraftStatus('❌ Failed to upload draft: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    this.showDraftStatus('❌ Error uploading draft: ' + error.message, 'error');
+                } finally {
+                    this.uploadDraftBtn.disabled = false;
+                    this.uploadDraftBtn.textContent = '📤 Upload Draft';
+                }
+            }
+            
+            async clearDraft() {
+                if (!this.currentSessionId) {
+                    this.showDraftStatus('No draft session to clear.', 'info');
+                    return;
+                }
+                
+                try {
+                    this.clearDraftBtn.disabled = true;
+                    this.clearDraftBtn.textContent = 'Clearing...';
+                    
+                    const response = await fetch('/api/draft/clear', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            session_id: this.currentSessionId
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.currentSessionId = null;
+                        this.draftContent.value = '';
+                        this.clearDraftBtn.disabled = true;
+                        this.showDraftStatus('✅ Draft content cleared successfully!', 'success');
+                    } else {
+                        this.showDraftStatus('❌ Failed to clear draft: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    this.showDraftStatus('❌ Error clearing draft: ' + error.message, 'error');
+                } finally {
+                    this.clearDraftBtn.disabled = false;
+                    this.clearDraftBtn.textContent = '🗑️ Clear Draft';
+                }
+            }
+            
+            showDraftStatus(message, type) {
+                this.draftStatus.textContent = message;
+                this.draftStatus.className = `draft-status ${type}`;
+                this.draftStatus.style.display = 'block';
+                
+                // Auto-hide success messages after 3 seconds
+                if (type === 'success') {
+                    setTimeout(() => {
+                        this.draftStatus.style.display = 'none';
+                    }, 3000);
+                }
             }
         }
         

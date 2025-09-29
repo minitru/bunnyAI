@@ -196,6 +196,150 @@ def clear_conversation_memory():
             'error': str(e)
         }), 500
 
+@app.route('/api/draft/upload', methods=['POST'])
+def upload_draft():
+    """Upload draft content to current session"""
+    try:
+        data = request.get_json()
+        content = data.get('content', '').strip()
+        metadata = data.get('metadata', {})
+        
+        if not content:
+            return jsonify({
+                'success': False,
+                'error': 'Content is required'
+            }), 400
+        
+        rag = get_rag_instance()
+        session_id = rag.add_draft_to_session(content, metadata)
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'message': 'Draft content uploaded successfully',
+            'content_length': len(content)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/draft/clear', methods=['POST'])
+def clear_draft():
+    """Clear draft content from session"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        
+        if not session_id:
+            return jsonify({
+                'success': False,
+                'error': 'Session ID is required'
+            }), 400
+        
+        rag = get_rag_instance()
+        success = rag.clear_draft_session(session_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Draft content cleared successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Session not found'
+            }), 404
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/draft/query', methods=['POST'])
+def query_with_drafts():
+    """Query with draft content included"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request body is required'
+            }), 400
+            
+        question = data.get('question', '').strip()
+        if not question:
+            return jsonify({
+                'success': False,
+                'error': 'Question is required'
+            }), 400
+        
+        # Optional parameters with defaults
+        session_id = data.get('session_id')
+        book_id = data.get('book', None)
+        model = data.get('model', 'anthropic/claude-3.5-sonnet')
+        n_results = data.get('context_chunks', 80)
+        use_book_knowledge = data.get('use_book_knowledge', True)
+        
+        # Convert single book to list format for RAG system
+        book_ids = [book_id] if book_id else None
+        
+        rag = get_rag_instance()
+        
+        # Record start time
+        start_time = time.time()
+        
+        # Perform query with draft content if session provided
+        if session_id:
+            result = rag.query_with_session_drafts(
+                question=question,
+                session_id=session_id,
+                book_ids=book_ids,
+                n_results=n_results,
+                use_book_knowledge=use_book_knowledge,
+                model=model
+            )
+        else:
+            result = rag.query(
+                question=question,
+                book_ids=book_ids,
+                n_results=n_results,
+                use_book_knowledge=use_book_knowledge,
+                model=model
+            )
+        
+        # Calculate processing time
+        processing_time = time.time() - start_time
+        
+        response_data = {
+            'success': True,
+            'answer': result['answer'],
+            'books_searched': result['books_searched'],
+            'context_length': result['context_length'],
+            'chunks_used': result['chunks_used'],
+            'model_used': result['model_used'],
+            'processing_time': round(processing_time, 2)
+        }
+        
+        # Add draft info if included
+        if result.get('draft_included'):
+            response_data['draft_included'] = True
+            response_data['draft_session_id'] = result.get('draft_session_id')
+            response_data['draft_metadata'] = result.get('draft_metadata')
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/knowledge-graph/<book_id>', methods=['GET'])
 def get_knowledge_graph(book_id):
     """Get knowledge graph for a specific book"""

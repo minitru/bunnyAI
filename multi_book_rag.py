@@ -10,6 +10,8 @@ from typing import List, Dict, Any, Optional, Union
 from openai import OpenAI
 import json
 import time
+import uuid
+from datetime import datetime
 from multi_book_analyzer import MultiBookAnalyzer
 
 class MultiBookRAG:
@@ -55,6 +57,9 @@ class MultiBookRAG:
         
         # Initialize multi-book analyzer
         self.book_analyzer = MultiBookAnalyzer(api_key)
+        
+        # Draft session management
+        self.draft_sessions = {}  # session_id -> {content, metadata, created_at}
         self.book_analyses = {}
         self.combined_analysis = None
         
@@ -608,6 +613,50 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
     def refresh_knowledge_graph(self, book_id: str) -> Dict[str, Any]:
         """Force refresh the knowledge graph with improved extraction"""
         return self.book_analyzer.refresh_knowledge_graph(book_id)
+    
+    def add_draft_to_session(self, content: str, metadata: dict = None, session_id: str = None) -> str:
+        """Add draft content to current session"""
+        if not session_id:
+            session_id = str(uuid.uuid4())
+        
+        if metadata is None:
+            metadata = {}
+        
+        self.draft_sessions[session_id] = {
+            'content': content,
+            'metadata': metadata,
+            'created_at': datetime.now()
+        }
+        
+        return session_id
+    
+    def clear_draft_session(self, session_id: str) -> bool:
+        """Clear draft content from session"""
+        if session_id in self.draft_sessions:
+            del self.draft_sessions[session_id]
+            return True
+        return False
+    
+    def get_draft_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get draft session data"""
+        return self.draft_sessions.get(session_id)
+    
+    def query_with_session_drafts(self, question: str, session_id: str = None, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:
+        """Query with session draft content included"""
+        # Regular query first
+        result = self.query(question, book_ids, n_results, use_book_knowledge, model)
+        
+        if session_id and session_id in self.draft_sessions:
+            draft_data = self.draft_sessions[session_id]
+            draft_context = f"\n\n--- Current Draft Context ---\n{draft_data['content']}"
+            
+            # Append draft context to the answer
+            result['answer'] += draft_context
+            result['draft_included'] = True
+            result['draft_session_id'] = session_id
+            result['draft_metadata'] = draft_data['metadata']
+        
+        return result
 
 def main():
     """Interactive CLI for Multi-Book Enhanced RAG"""
