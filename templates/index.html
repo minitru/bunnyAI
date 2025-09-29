@@ -620,9 +620,21 @@
                         allBooksOption.textContent = 'All Books';
                         this.bookChoice.appendChild(allBooksOption);
                         
-                        // Default to the first book (single book selection)
-                        if (data.books.length > 0) {
-                            this.bookChoice.value = data.books[0].book_id;
+                        // Default to "Wanda & Me - Act 1" if available, otherwise first book
+                        let defaultBookId = null;
+                        const wandaBook = data.books.find(book => 
+                            book.book_title.toLowerCase().includes('wanda') && 
+                            book.book_title.toLowerCase().includes('me')
+                        );
+                        
+                        if (wandaBook) {
+                            defaultBookId = wandaBook.book_id;
+                        } else if (data.books.length > 0) {
+                            defaultBookId = data.books[0].book_id;
+                        }
+                        
+                        if (defaultBookId) {
+                            this.bookChoice.value = defaultBookId;
                         }
                     } else {
                         console.error('Failed to load books:', data.error);
