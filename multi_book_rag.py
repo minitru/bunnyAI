@@ -628,6 +628,9 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
             'created_at': datetime.now()
         }
         
+        print(f"📝 Draft added to session {session_id}, content length: {len(content)}")
+        print(f"📝 Total active sessions: {len(self.draft_sessions)}")
+        
         return session_id
     
     def clear_draft_session(self, session_id: str) -> bool:
@@ -643,18 +646,33 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
     
     def query_with_session_drafts(self, question: str, session_id: str = None, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:
         """Query with session draft content included"""
-        # Regular query first
-        result = self.query(question, book_ids, n_results, use_book_knowledge, model)
+        print(f"🔍 Draft query called with session_id: {session_id}")
+        print(f"🔍 Available draft sessions: {list(self.draft_sessions.keys())}")
         
+        # Get draft content if session exists
+        draft_content = ""
         if session_id and session_id in self.draft_sessions:
             draft_data = self.draft_sessions[session_id]
-            draft_context = f"\n\n--- Current Draft Context ---\n{draft_data['content']}"
-            
-            # Append draft context to the answer
-            result['answer'] += draft_context
+            draft_content = f"\n\n--- ADDITIONAL DRAFT CONTEXT FOR ANALYSIS ---\n{draft_data['content']}\n--- END DRAFT CONTEXT ---\n"
+            print(f"🔍 Found draft content for session {session_id}, length: {len(draft_content)}")
+        else:
+            print(f"🔍 No draft content found for session {session_id}")
+        
+        # Modify the question to include draft content
+        enhanced_question = question
+        if draft_content:
+            enhanced_question = f"{question}\n\nIMPORTANT: Please also analyze the following draft content alongside the book content:\n{draft_content}"
+            print(f"🔍 Enhanced question length: {len(enhanced_question)}")
+        
+        # Perform regular query with enhanced question
+        result = self.query(enhanced_question, book_ids, n_results, use_book_knowledge, model)
+        
+        # Add draft metadata to result
+        if session_id and session_id in self.draft_sessions:
             result['draft_included'] = True
             result['draft_session_id'] = session_id
-            result['draft_metadata'] = draft_data['metadata']
+            result['draft_metadata'] = self.draft_sessions[session_id]['metadata']
+            print(f"🔍 Added draft metadata to result")
         
         return result
 

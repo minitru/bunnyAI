@@ -259,6 +259,22 @@ def clear_draft():
             'error': str(e)
         }), 500
 
+@app.route('/api/draft/status', methods=['GET'])
+def get_draft_status():
+    """Get current draft session status (for debugging)"""
+    try:
+        rag = get_rag_instance()
+        return jsonify({
+            'success': True,
+            'active_sessions': len(rag.draft_sessions),
+            'sessions': list(rag.draft_sessions.keys())
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/draft/query', methods=['POST'])
 def query_with_drafts():
     """Query with draft content included"""

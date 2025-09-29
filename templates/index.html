@@ -385,6 +385,15 @@
             background: #c82333;
         }
         
+        .debug-btn {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .debug-btn:hover:not(:disabled) {
+            background: #138496;
+        }
+        
         .draft-btn:disabled {
             background: #6c757d;
             cursor: not-allowed;
@@ -500,6 +509,7 @@
                     <div class="draft-buttons">
                         <button id="upload-draft-btn" class="draft-btn upload-btn">📤 Upload Draft</button>
                         <button id="clear-draft-btn" class="draft-btn clear-btn" disabled>🗑️ Clear Draft</button>
+                        <button id="debug-draft-btn" class="draft-btn debug-btn">🔍 Debug Status</button>
                     </div>
                     <div id="draft-status" class="draft-status" style="display: none;"></div>
                 </div>
@@ -569,6 +579,7 @@
                 this.draftContent = document.getElementById('draft-content');
                 this.uploadDraftBtn = document.getElementById('upload-draft-btn');
                 this.clearDraftBtn = document.getElementById('clear-draft-btn');
+                this.debugDraftBtn = document.getElementById('debug-draft-btn');
                 this.draftStatus = document.getElementById('draft-status');
                 this.currentSessionId = null;
                 
@@ -628,6 +639,7 @@
                 // Draft management event listeners
                 this.uploadDraftBtn.addEventListener('click', () => this.uploadDraft());
                 this.clearDraftBtn.addEventListener('click', () => this.clearDraft());
+                this.debugDraftBtn.addEventListener('click', () => this.debugDraftStatus());
                 
                 this.questionInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -673,6 +685,9 @@
                     const endpoint = this.currentSessionId ? '/api/draft/query' : '/api/query';
                     if (this.currentSessionId) {
                         requestBody.session_id = this.currentSessionId;
+                        console.log('Using draft query endpoint with session ID:', this.currentSessionId);
+                    } else {
+                        console.log('Using regular query endpoint (no draft session)');
                     }
                     
                     const response = await fetch(endpoint, {
@@ -811,8 +826,10 @@
                     if (data.success) {
                         this.currentSessionId = data.session_id;
                         this.clearDraftBtn.disabled = false;
+                        console.log('Draft uploaded successfully. Session ID:', data.session_id);
                         this.showDraftStatus(`✅ Draft uploaded successfully! (${data.content_length} characters)`, 'success');
                     } else {
+                        console.error('Failed to upload draft:', data.error);
                         this.showDraftStatus('❌ Failed to upload draft: ' + data.error, 'error');
                     }
                 } catch (error) {
@@ -871,6 +888,22 @@
                     setTimeout(() => {
                         this.draftStatus.style.display = 'none';
                     }, 3000);
+                }
+            }
+            
+            async debugDraftStatus() {
+                try {
+                    const response = await fetch('/api/draft/status');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const statusMessage = `Active Sessions: ${data.active_sessions}\nSession IDs: ${data.sessions.join(', ')}\nCurrent Session: ${this.currentSessionId || 'None'}`;
+                        this.showDraftStatus(statusMessage, 'info');
+                    } else {
+                        this.showDraftStatus('❌ Failed to get status: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    this.showDraftStatus('❌ Error getting status: ' + error.message, 'error');
                 }
             }
         }
