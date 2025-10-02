@@ -271,13 +271,13 @@ class MultiBookRAG:
     
     def get_book_knowledge(self, book_ids: Optional[List[str]] = None) -> str:
         """
-        Get book knowledge for specific books or all books
+        Get comprehensive book knowledge for specific books or all books
         
         Args:
             book_ids: List of book IDs, or None for all books
             
         Returns:
-            Book knowledge string
+            Comprehensive book knowledge string including summary, character analysis, plot analysis, and knowledge graph
         """
         if not self.book_analyses:
             return ""
@@ -287,29 +287,97 @@ class MultiBookRAG:
             if self.combined_analysis:
                 return self.combined_analysis.get('combined_analysis', '')
             else:
-                # Create summary from all books
-                summaries = []
+                # Create comprehensive analysis from all books
+                comprehensive_analyses = []
                 for book_id, data in self.book_analyses.items():
                     if book_id == '_combined':
                         continue
                     book_info = data.get('book_info', {})
                     analysis = data.get('analysis', {})
                     book_title = book_info.get('book_title', book_id) if isinstance(book_info, dict) else book_id
-                    summary = analysis.get('book_summary', '')
-                    summaries.append(f"=== {book_title} ===\n{summary}\n")
-                return "\n".join(summaries)
+                    
+                    # Build comprehensive analysis including all components
+                    book_analysis = f"=== {book_title} ===\n"
+                    
+                    # Add book summary
+                    if analysis.get('book_summary'):
+                        book_analysis += f"\n📖 BOOK SUMMARY:\n{analysis['book_summary']}\n"
+                    
+                    # Add character analysis
+                    if analysis.get('character_analysis'):
+                        book_analysis += f"\n👥 CHARACTER ANALYSIS:\n{analysis['character_analysis']}\n"
+                    
+                    # Add plot analysis
+                    if analysis.get('plot_analysis'):
+                        book_analysis += f"\n📚 PLOT ANALYSIS:\n{analysis['plot_analysis']}\n"
+                    
+                    # Add knowledge graph summary
+                    if analysis.get('knowledge_graph'):
+                        kg = analysis['knowledge_graph']
+                        if kg.get('entities'):
+                            entity_count = len(kg['entities'])
+                            relationship_count = len(kg.get('relationships', []))
+                            book_analysis += f"\n🕸️ KNOWLEDGE GRAPH:\n"
+                            book_analysis += f"Extracted {entity_count} entities and {relationship_count} relationships from the text.\n"
+                            
+                            # Add key entities summary
+                            key_entities = []
+                            for entity_id, entity_data in list(kg['entities'].items())[:10]:  # Top 10 entities
+                                if entity_data.get('importance', 0) > 0.5:  # Only high-importance entities
+                                    key_entities.append(f"- {entity_data['name']} ({entity_data['type']})")
+                            
+                            if key_entities:
+                                book_analysis += f"Key entities: {', '.join([e.split(' (')[0] for e in key_entities])}\n"
+                    
+                    book_analysis += "\n"
+                    comprehensive_analyses.append(book_analysis)
+                return "\n".join(comprehensive_analyses)
         else:
-            # Return knowledge for specific books
-            summaries = []
+            # Return comprehensive knowledge for specific books
+            comprehensive_analyses = []
             for book_id in book_ids:
                 if book_id in self.book_analyses:
                     data = self.book_analyses[book_id]
                     book_info = data.get('book_info', {})
                     analysis = data.get('analysis', {})
                     book_title = book_info.get('book_title', book_id) if isinstance(book_info, dict) else book_id
-                    summary = analysis.get('book_summary', '')
-                    summaries.append(f"=== {book_title} ===\n{summary}\n")
-            return "\n".join(summaries)
+                    
+                    # Build comprehensive analysis including all components
+                    book_analysis = f"=== {book_title} ===\n"
+                    
+                    # Add book summary
+                    if analysis.get('book_summary'):
+                        book_analysis += f"\n📖 BOOK SUMMARY:\n{analysis['book_summary']}\n"
+                    
+                    # Add character analysis
+                    if analysis.get('character_analysis'):
+                        book_analysis += f"\n👥 CHARACTER ANALYSIS:\n{analysis['character_analysis']}\n"
+                    
+                    # Add plot analysis
+                    if analysis.get('plot_analysis'):
+                        book_analysis += f"\n📚 PLOT ANALYSIS:\n{analysis['plot_analysis']}\n"
+                    
+                    # Add knowledge graph summary
+                    if analysis.get('knowledge_graph'):
+                        kg = analysis['knowledge_graph']
+                        if kg.get('entities'):
+                            entity_count = len(kg['entities'])
+                            relationship_count = len(kg.get('relationships', []))
+                            book_analysis += f"\n🕸️ KNOWLEDGE GRAPH:\n"
+                            book_analysis += f"Extracted {entity_count} entities and {relationship_count} relationships from the text.\n"
+                            
+                            # Add key entities summary
+                            key_entities = []
+                            for entity_id, entity_data in list(kg['entities'].items())[:10]:  # Top 10 entities
+                                if entity_data.get('importance', 0) > 0.5:  # Only high-importance entities
+                                    key_entities.append(f"- {entity_data['name']} ({entity_data['type']})")
+                            
+                            if key_entities:
+                                book_analysis += f"Key entities: {', '.join([e.split(' (')[0] for e in key_entities])}\n"
+                    
+                    book_analysis += "\n"
+                    comprehensive_analyses.append(book_analysis)
+            return "\n".join(comprehensive_analyses)
     
     def generate_response(self, query: str, context: str, book_knowledge: str = "", book_ids: Optional[List[str]] = None, model: str = 'anthropic/claude-sonnet-4.5') -> str:
         """
