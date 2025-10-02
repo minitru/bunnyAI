@@ -37,7 +37,7 @@ def main():
     models = {
         "1": "openai/gpt-4o-mini",
         "2": "openai/gpt-4o", 
-        "3": "anthropic/claude-3.5-sonnet",
+        "3": "anthropic/claude-sonnet-4-5",
         "4": "google/gemini-pro-1.5",
         "5": "meta-llama/llama-3.1-405b-instruct"
     }
@@ -45,7 +45,7 @@ def main():
     print("Available models:")
     print("1. GPT-4o Mini (fast, cheap)")
     print("2. GPT-4o (best quality, expensive)")
-    print("3. Claude 3.5 Sonnet (excellent analysis)")
+    print("3. Claude Sonnet 4.5 (excellent analysis)")
     print("4. Gemini Pro 1.5 (long context)")
     print("5. Llama 3.1 405B (open source)")
     

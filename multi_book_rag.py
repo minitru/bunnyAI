@@ -49,7 +49,7 @@ class MultiBookRAG:
         )
         
         # Configuration
-        self.model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+        self.model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4-5")
         self.max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "8000"))
         self.temperature = float(os.getenv("OPENROUTER_TEMPERATURE", "0.3"))
         self.force_json = os.getenv("OPENROUTER_FORCE_JSON", "1") == "1"
@@ -311,7 +311,7 @@ class MultiBookRAG:
                     summaries.append(f"=== {book_title} ===\n{summary}\n")
             return "\n".join(summaries)
     
-    def generate_response(self, query: str, context: str, book_knowledge: str = "", book_ids: Optional[List[str]] = None, model: str = 'anthropic/claude-3.5-sonnet') -> str:
+    def generate_response(self, query: str, context: str, book_knowledge: str = "", book_ids: Optional[List[str]] = None, model: str = 'anthropic/claude-sonnet-4-5') -> str:
         """
         Generate response with book knowledge integration
         

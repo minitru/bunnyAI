@@ -1,6 +1,6 @@
 # a Multi-Book Enhanced RAG API - Literary Analysis
 
-A sophisticated REST API for deep literary analysis of multiple books using ChromaDB and Claude 3.5 Sonnet. Query books individually or together with comprehensive context and professional literary analysis.
+A sophisticated REST API for deep literary analysis of multiple books using ChromaDB and Claude Sonnet 4.5. Query books individually or together with comprehensive context and professional literary analysis.
 
 ## 🚀 Quick Start
 
@@ -108,7 +108,7 @@ nano .env
 ```bash
 # OpenRouter Configuration
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
+OPENROUTER_MODEL=anthropic/claude-sonnet-4-5
 OPENROUTER_MAX_TOKENS=8000
 OPENROUTER_TEMPERATURE=0.3
 OPENROUTER_FORCE_JSON=0
@@ -121,7 +121,7 @@ CHROMADB_TENANT=your_chromadb_tenant_here
 CHROMADB_DATABASE=your_chromadb_database_here
 ```
 
-### Current Model: Claude 3.5 Sonnet
+### Current Model: Claude Sonnet 4.5
 - **Provider**: Anthropic
 - **Context**: 200k tokens
 - **Quality**: 8/10 for literary analysis
