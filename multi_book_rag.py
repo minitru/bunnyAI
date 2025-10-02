@@ -50,7 +50,7 @@ class MultiBookRAG:
         
         # Configuration
         self.model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4.5")
-        self.max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "8000"))
+        self.max_tokens = int(os.getenv("OPENROUTER_MAX_TOKENS", "12000"))  # Increased for comprehensive knowledge
         self.temperature = float(os.getenv("OPENROUTER_TEMPERATURE", "0.3"))
         self.force_json = os.getenv("OPENROUTER_FORCE_JSON", "1") == "1"
         self.question_final_grace_ms = int(os.getenv("QUESTION_FINAL_GRACE_MS", "1200"))
@@ -299,19 +299,31 @@ class MultiBookRAG:
                     # Build comprehensive analysis including all components
                     book_analysis = f"=== {book_title} ===\n"
                     
-                    # Add book summary
+                    # Add book summary (truncated for efficiency)
                     if analysis.get('book_summary'):
-                        book_analysis += f"\n📖 BOOK SUMMARY:\n{analysis['book_summary']}\n"
+                        summary = analysis['book_summary']
+                        # Truncate if too long to prevent timeout
+                        if len(summary) > 3000:
+                            summary = summary[:3000] + "... [truncated for efficiency]"
+                        book_analysis += f"\n📖 BOOK SUMMARY:\n{summary}\n"
                     
-                    # Add character analysis
+                    # Add character analysis (truncated for efficiency)
                     if analysis.get('character_analysis'):
-                        book_analysis += f"\n👥 CHARACTER ANALYSIS:\n{analysis['character_analysis']}\n"
+                        char_analysis = analysis['character_analysis']
+                        # Truncate if too long to prevent timeout
+                        if len(char_analysis) > 2500:
+                            char_analysis = char_analysis[:2500] + "... [truncated for efficiency]"
+                        book_analysis += f"\n👥 CHARACTER ANALYSIS:\n{char_analysis}\n"
                     
-                    # Add plot analysis
+                    # Add plot analysis (truncated for efficiency)
                     if analysis.get('plot_analysis'):
-                        book_analysis += f"\n📚 PLOT ANALYSIS:\n{analysis['plot_analysis']}\n"
+                        plot_analysis = analysis['plot_analysis']
+                        # Truncate if too long to prevent timeout
+                        if len(plot_analysis) > 2500:
+                            plot_analysis = plot_analysis[:2500] + "... [truncated for efficiency]"
+                        book_analysis += f"\n📚 PLOT ANALYSIS:\n{plot_analysis}\n"
                     
-                    # Add knowledge graph summary
+                    # Add knowledge graph summary (concise)
                     if analysis.get('knowledge_graph'):
                         kg = analysis['knowledge_graph']
                         if kg.get('entities'):
@@ -320,9 +332,9 @@ class MultiBookRAG:
                             book_analysis += f"\n🕸️ KNOWLEDGE GRAPH:\n"
                             book_analysis += f"Extracted {entity_count} entities and {relationship_count} relationships from the text.\n"
                             
-                            # Add key entities summary
+                            # Add key entities summary (top 5 only for efficiency)
                             key_entities = []
-                            for entity_id, entity_data in list(kg['entities'].items())[:10]:  # Top 10 entities
+                            for entity_id, entity_data in list(kg['entities'].items())[:5]:  # Top 5 entities only
                                 if entity_data.get('importance', 0) > 0.5:  # Only high-importance entities
                                     key_entities.append(f"- {entity_data['name']} ({entity_data['type']})")
                             
@@ -345,19 +357,31 @@ class MultiBookRAG:
                     # Build comprehensive analysis including all components
                     book_analysis = f"=== {book_title} ===\n"
                     
-                    # Add book summary
+                    # Add book summary (truncated for efficiency)
                     if analysis.get('book_summary'):
-                        book_analysis += f"\n📖 BOOK SUMMARY:\n{analysis['book_summary']}\n"
+                        summary = analysis['book_summary']
+                        # Truncate if too long to prevent timeout
+                        if len(summary) > 3000:
+                            summary = summary[:3000] + "... [truncated for efficiency]"
+                        book_analysis += f"\n📖 BOOK SUMMARY:\n{summary}\n"
                     
-                    # Add character analysis
+                    # Add character analysis (truncated for efficiency)
                     if analysis.get('character_analysis'):
-                        book_analysis += f"\n👥 CHARACTER ANALYSIS:\n{analysis['character_analysis']}\n"
+                        char_analysis = analysis['character_analysis']
+                        # Truncate if too long to prevent timeout
+                        if len(char_analysis) > 2500:
+                            char_analysis = char_analysis[:2500] + "... [truncated for efficiency]"
+                        book_analysis += f"\n👥 CHARACTER ANALYSIS:\n{char_analysis}\n"
                     
-                    # Add plot analysis
+                    # Add plot analysis (truncated for efficiency)
                     if analysis.get('plot_analysis'):
-                        book_analysis += f"\n📚 PLOT ANALYSIS:\n{analysis['plot_analysis']}\n"
+                        plot_analysis = analysis['plot_analysis']
+                        # Truncate if too long to prevent timeout
+                        if len(plot_analysis) > 2500:
+                            plot_analysis = plot_analysis[:2500] + "... [truncated for efficiency]"
+                        book_analysis += f"\n📚 PLOT ANALYSIS:\n{plot_analysis}\n"
                     
-                    # Add knowledge graph summary
+                    # Add knowledge graph summary (concise)
                     if analysis.get('knowledge_graph'):
                         kg = analysis['knowledge_graph']
                         if kg.get('entities'):
@@ -366,9 +390,9 @@ class MultiBookRAG:
                             book_analysis += f"\n🕸️ KNOWLEDGE GRAPH:\n"
                             book_analysis += f"Extracted {entity_count} entities and {relationship_count} relationships from the text.\n"
                             
-                            # Add key entities summary
+                            # Add key entities summary (top 5 only for efficiency)
                             key_entities = []
-                            for entity_id, entity_data in list(kg['entities'].items())[:10]:  # Top 10 entities
+                            for entity_id, entity_data in list(kg['entities'].items())[:5]:  # Top 5 entities only
                                 if entity_data.get('importance', 0) > 0.5:  # Only high-importance entities
                                     key_entities.append(f"- {entity_data['name']} ({entity_data['type']})")
                             
@@ -549,14 +573,19 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
                 model=model,
                 messages=messages,
                 max_tokens=self.max_tokens,
-                temperature=self.temperature
+                temperature=self.temperature,
+                timeout=120  # 2 minute timeout
             )
             
             content = response.choices[0].message.content
             return content
             
         except Exception as e:
-            return f"Error generating response: {e}"
+            error_msg = str(e)
+            if "timeout" in error_msg.lower() or "gateway timeout" in error_msg.lower():
+                return f"Request timed out. The comprehensive book knowledge is quite large and may need more time to process. Try asking a more specific question or contact support if this persists."
+            else:
+                return f"Error generating response: {e}"
     
     def query(self, question: str, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:
         """
