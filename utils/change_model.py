@@ -37,7 +37,7 @@ def main():
     models = {
         "1": "openai/gpt-4o-mini",
         "2": "openai/gpt-4o", 
-        "3": "anthropic/claude-sonnet-4-5",
+        "3": "anthropic/claude-sonnet-4.5",
         "4": "google/gemini-pro-1.5",
         "5": "meta-llama/llama-3.1-405b-instruct"
     }

@@ -108,7 +108,7 @@ nano .env
 ```bash
 # OpenRouter Configuration
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-OPENROUTER_MODEL=anthropic/claude-sonnet-4-5
+OPENROUTER_MODEL=anthropic/claude-sonnet-4.5
 OPENROUTER_MAX_TOKENS=8000
 OPENROUTER_TEMPERATURE=0.3
 OPENROUTER_FORCE_JSON=0
