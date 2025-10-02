@@ -119,7 +119,7 @@ def query_books():
         
         # Optional parameters with defaults
         book_id = data.get('book', None)  # None means all books
-        model = data.get('model', 'anthropic/claude-3.5-sonnet')  # Default model
+        model = data.get('model', 'anthropic/claude-sonnet-4.5')  # Default model
         n_results = data.get('context_chunks', 80)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
@@ -298,7 +298,7 @@ def query_with_drafts():
         # Optional parameters with defaults
         session_id = data.get('session_id')
         book_id = data.get('book', None)
-        model = data.get('model', 'anthropic/claude-3.5-sonnet')
+        model = data.get('model', 'anthropic/claude-sonnet-4.5')
         n_results = data.get('context_chunks', 80)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
