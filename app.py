@@ -120,7 +120,7 @@ def query_books():
         # Optional parameters with defaults
         book_id = data.get('book', None)  # None means all books
         model = data.get('model', 'anthropic/claude-sonnet-4.5')  # Default model
-        n_results = data.get('context_chunks', 80)
+        n_results = data.get('context_chunks', 60)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
         # Convert single book to list format for RAG system
@@ -299,7 +299,7 @@ def query_with_drafts():
         session_id = data.get('session_id')
         book_id = data.get('book', None)
         model = data.get('model', 'anthropic/claude-sonnet-4.5')
-        n_results = data.get('context_chunks', 80)
+        n_results = data.get('context_chunks', 60)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
         # Convert single book to list format for RAG system
