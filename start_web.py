@@ -30,8 +30,9 @@ def start_web_app():
     
     print("✅ Environment checks passed")
     print("🌐 Starting web server on all interfaces (0.0.0.0:7777)")
-    print("📚 The system will initialize book knowledge on first startup...")
-    print("⏳ This may take a few moments...")
+    print("📚 The system will check and analyze books that need analysis...")
+    print("⏳ This may take a few moments if books need analysis...")
+    print("💡 Books with valid cache will load instantly!")
     print()
     print("🎯 Once started, access the app at:")
     print("   http://localhost:7777 (local access)")

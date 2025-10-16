@@ -486,6 +486,58 @@ Provide a detailed analysis of the plot structure, conflicts, and themes."""
         except Exception as e:
             return f"Error analyzing plot: {e}"
     
+    def get_books_needing_analysis(self) -> List[Dict[str, Any]]:
+        """
+        Get list of books that need analysis (no cache or content changed)
+        
+        Returns:
+            List of books that need analysis
+        """
+        books = self.get_available_books()
+        if not books:
+            return []
+        
+        books_needing_analysis = []
+        
+        for book in books:
+            book_id = book['book_id']
+            cache_file = os.path.join(self.cache_dir, f"book_analysis_{book_id}.pkl")
+            
+            needs_analysis = False
+            
+            # Check if cache file exists
+            if not os.path.exists(cache_file):
+                needs_analysis = True
+                print(f"   📝 {book['book_title']}: No cache found")
+            else:
+                try:
+                    with open(cache_file, 'rb') as f:
+                        cached_data = pickle.load(f)
+                    
+                    # Check if cache is valid
+                    if not self.is_cache_valid(cached_data.get('metadata', {})):
+                        needs_analysis = True
+                        print(f"   ⏰ {book['book_title']}: Cache expired")
+                    else:
+                        # Check content hash
+                        current_content_hash = self.calculate_content_hash(book_id)
+                        cached_content_hash = cached_data.get('metadata', {}).get('content_hash', '')
+                        
+                        if current_content_hash and current_content_hash != cached_content_hash:
+                            needs_analysis = True
+                            print(f"   🔄 {book['book_title']}: Content changed")
+                        else:
+                            print(f"   ✅ {book['book_title']}: Cache valid")
+                            
+                except Exception as e:
+                    needs_analysis = True
+                    print(f"   ❌ {book['book_title']}: Cache error - {e}")
+            
+            if needs_analysis:
+                books_needing_analysis.append(book)
+        
+        return books_needing_analysis
+
     def analyze_all_books(self, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Analyze all available books
@@ -500,10 +552,60 @@ Provide a detailed analysis of the plot structure, conflicts, and themes."""
         if not books:
             return {'error': 'No books found'}
         
-        print(f"🔍 Analyzing {len(books)} books...")
+        if force_refresh:
+            print(f"🔄 Force refresh: Analyzing {len(books)} books...")
+            books_to_analyze = books
+        else:
+            # Check which books need analysis
+            print(f"🔍 Checking which books need analysis...")
+            books_to_analyze = self.get_books_needing_analysis()
+            
+            if not books_to_analyze:
+                print(f"✅ All books are up to date! Loading from cache...")
+                # Load all analyses from cache
+                all_analyses = {}
+                for book in books:
+                    book_id = book['book_id']
+                    cache_file = os.path.join(self.cache_dir, f"book_analysis_{book_id}.pkl")
+                    try:
+                        with open(cache_file, 'rb') as f:
+                            cached_data = pickle.load(f)
+                        all_analyses[book_id] = {
+                            'book_info': book,
+                            'analysis': cached_data['analysis']
+                        }
+                    except Exception as e:
+                        print(f"   ⚠️ Error loading cache for {book_id}: {e}")
+                        # If cache loading fails, add to analysis list
+                        books_to_analyze.append(book)
+                
+                if not books_to_analyze:
+                    return all_analyses
+        
+        if books_to_analyze:
+            print(f"📚 Analyzing {len(books_to_analyze)} books that need analysis...")
         
         all_analyses = {}
-        for book in books:
+        
+        # First, load cached analyses for books that don't need analysis
+        if not force_refresh:
+            for book in books:
+                if book not in books_to_analyze:
+                    book_id = book['book_id']
+                    cache_file = os.path.join(self.cache_dir, f"book_analysis_{book_id}.pkl")
+                    try:
+                        with open(cache_file, 'rb') as f:
+                            cached_data = pickle.load(f)
+                        all_analyses[book_id] = {
+                            'book_info': book,
+                            'analysis': cached_data['analysis']
+                        }
+                    except Exception as e:
+                        print(f"   ⚠️ Error loading cache for {book_id}: {e}")
+                        books_to_analyze.append(book)
+        
+        # Now analyze books that need analysis
+        for book in books_to_analyze:
             book_id = book['book_id']
             print(f"\n📚 Analyzing: {book['book_title']}")
             
@@ -513,8 +615,7 @@ Provide a detailed analysis of the plot structure, conflicts, and themes."""
                 'analysis': analysis
             }
         
-        # Skip combined analysis for faster startup
-        print(f"\n✅ Individual book analyses complete!")
+        print(f"\n✅ Book analysis complete!")
         
         return all_analyses
     

@@ -26,7 +26,8 @@ def main():
     for i, book in enumerate(books):
         print(f"   {i+1}. {book['book_title']} ({book['chunk_count']} chunks)")
     
-    # Initialize book knowledge
+    # Initialize book knowledge (will check which books need analysis)
+    print("🔍 Checking which books need analysis...")
     rag.initialize_book_knowledge()
     
     print("\n✅ System ready! Ask questions about the books")
