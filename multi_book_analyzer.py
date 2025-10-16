@@ -42,6 +42,7 @@ class MultiBookAnalyzer:
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
+            timeout=120.0  # 2 minutes timeout for API calls
         )
         
         # Configuration
