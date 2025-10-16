@@ -161,13 +161,9 @@ def main():
     
     print(f"\n" + "="*50)
     
-    # Ask user if they want to refresh
-    response = input("\n🔄 Do you want to refresh the knowledge graph with improved extraction? (y/n): ")
-    
-    if response.lower() in ['y', 'yes']:
-        refresh_knowledge_graph_manually()
-    else:
-        print("👋 No refresh performed. Current knowledge graphs remain unchanged.")
+    # Force refresh without user input for testing
+    print("\n🔄 Force refreshing knowledge graph with improved extraction...")
+    refresh_knowledge_graph_manually()
 
 if __name__ == "__main__":
     main()

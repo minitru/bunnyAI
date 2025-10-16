@@ -185,8 +185,45 @@ Return ONLY the JSON, no other text."""
             if content.endswith('```'):
                 content = content[:-3]
             
-            # Parse JSON
-            kg_data = json.loads(content)
+            content = content.strip()
+            
+            # Try to find the JSON part if there's extra text
+            if '{' in content and '}' in content:
+                start_idx = content.find('{')
+                end_idx = content.rfind('}') + 1
+                content = content[start_idx:end_idx]
+            
+            # Parse JSON with better error handling
+            try:
+                kg_data = json.loads(content)
+            except json.JSONDecodeError as e:
+                print(f"   ❌ JSON parsing error: {e}")
+                print(f"   📝 Content preview: {content[:500]}...")
+                
+                # Try to fix common JSON issues
+                try:
+                    import re
+                    
+                    # Remove any trailing commas before closing braces/brackets
+                    content = re.sub(r',(\s*[}\]])', r'\1', content)
+                    
+                    # Fix unescaped quotes in strings
+                    content = re.sub(r'(?<!\\)"(?=.*":)', r'\\"', content)
+                    
+                    # Fix missing quotes around keys
+                    content = re.sub(r'(\w+)(\s*:)', r'"\1"\2', content)
+                    
+                    # Fix single quotes to double quotes
+                    content = re.sub(r"'([^']*)'", r'"\1"', content)
+                    
+                    # Remove any control characters that might break JSON
+                    content = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content)
+                    
+                    kg_data = json.loads(content)
+                    print(f"   ✅ Fixed JSON parsing")
+                except json.JSONDecodeError as e2:
+                    print(f"   ❌ Still failed after cleanup: {e2}")
+                    raise e2
             
             # Validate structure
             if 'entities' not in kg_data or 'relationships' not in kg_data:
@@ -246,14 +283,27 @@ Return ONLY the JSON, no other text."""
         
         return embedding
     
-    def _save_knowledge_graph_to_cache(self, book_id: str, kg_data: Dict[str, Any]):
+    def _save_knowledge_graph_to_cache(self, book_id: str, kg_data: Dict[str, Any], content_hash: str = ""):
         """Save knowledge graph data to cache file"""
         try:
             cache_file = f"cache/knowledge_graphs/kg_{book_id}.pkl"
             os.makedirs(os.path.dirname(cache_file), exist_ok=True)
             
+            # Create cache data with metadata including content hash
+            cache_data = {
+                'knowledge_graph': kg_data,
+                'metadata': {
+                    'book_id': book_id,
+                    'created_at': datetime.now().isoformat(),
+                    'model': self.model,
+                    'entity_count': len(kg_data.get('entities', {})),
+                    'relationship_count': len(kg_data.get('relationships', [])),
+                    'content_hash': content_hash
+                }
+            }
+            
             with open(cache_file, 'wb') as f:
-                pickle.dump(kg_data, f)
+                pickle.dump(cache_data, f)
             
             print(f"   💾 Saved knowledge graph to cache: {len(kg_data.get('entities', {}))} entities, {len(kg_data.get('relationships', []))} relationships")
             

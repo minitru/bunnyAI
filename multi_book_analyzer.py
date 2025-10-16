@@ -154,6 +154,38 @@ class MultiBookAnalyzer:
             print(f"Error retrieving chunks for book {book_id}: {e}")
             return []
     
+    def calculate_content_hash(self, book_id: str) -> str:
+        """
+        Calculate a hash of all book content in ChromaDB
+        
+        Args:
+            book_id: The book identifier
+            
+        Returns:
+            Content hash string
+        """
+        try:
+            chunks = self.get_book_chunks(book_id)
+            if not chunks:
+                return ""
+            
+            # Create a deterministic content string from all chunks
+            # Only include the actual text content, not metadata that might change
+            content_parts = []
+            for chunk in sorted(chunks, key=lambda x: x.get('metadata', {}).get('chunk_index', 0)):
+                # Only include the text content for hashing
+                content_parts.append(chunk['text'].strip())
+            
+            content_string = "|".join(content_parts)
+            
+            # Calculate hash
+            content_hash = hashlib.md5(content_string.encode('utf-8')).hexdigest()
+            return content_hash
+            
+        except Exception as e:
+            print(f"Error calculating content hash for {book_id}: {e}")
+            return ""
+    
     def analyze_single_book(self, book_id: str, force_refresh: bool = False) -> Dict[str, str]:
         """
         Analyze a single book
@@ -167,16 +199,26 @@ class MultiBookAnalyzer:
         """
         # Check cache first
         cache_file = os.path.join(self.cache_dir, f"book_analysis_{book_id}.pkl")
+        using_cache = False
         
         if not force_refresh and os.path.exists(cache_file):
             try:
                 with open(cache_file, 'rb') as f:
                     cached_data = pickle.load(f)
                 
-                # Check if cache is still valid
+                # Check if cache is still valid (both time and content)
                 if self.is_cache_valid(cached_data.get('metadata', {})):
-                    print(f"📂 Loading cached analysis for {book_id}...")
-                    return cached_data['analysis']
+                    # Calculate current content hash
+                    current_content_hash = self.calculate_content_hash(book_id)
+                    cached_content_hash = cached_data.get('metadata', {}).get('content_hash', '')
+                    
+                    # Only use cache if content hasn't changed
+                    if current_content_hash and current_content_hash == cached_content_hash:
+                        print(f"📂 Loading cached analysis for {book_id}...")
+                        using_cache = True
+                        return cached_data['analysis']
+                    else:
+                        print(f"🔄 Content changed for {book_id}, reanalyzing...")
             except Exception as e:
                 print(f"Error loading cache for {book_id}: {e}")
         
@@ -245,6 +287,9 @@ class MultiBookAnalyzer:
         print(f"   🕸️ Building knowledge graph...")
         analysis['knowledge_graph'] = self.build_knowledge_graph_from_entities(book_id, comprehensive_entities)
         
+        # Calculate content hash for cache validation
+        content_hash = self.calculate_content_hash(book_id)
+        
         # Cache the analysis
         cache_data = {
             'analysis': analysis,
@@ -254,7 +299,8 @@ class MultiBookAnalyzer:
                 'created_at': datetime.now().isoformat(),
                 'model': self.model,
                 'chunks_analyzed': len(sample_chunks),
-                'total_chunks': total_chunks
+                'total_chunks': total_chunks,
+                'content_hash': content_hash
             }
         }
         
@@ -639,6 +685,8 @@ Provide a detailed analysis of the plot structure, conflicts, and themes."""
         """
         extraction_prompt = f"""You are an expert literary analyst. Extract EVERY SINGLE entity and relationship from this book content. Be extremely thorough - extract every character, place, object, event, and concept mentioned, no matter how minor.
 
+CRITICAL: Return ONLY valid JSON. No explanations, no markdown, no code blocks. Just pure JSON.
+
 Return ONLY valid JSON with this exact structure:
 {{
     "entities": {{
@@ -686,6 +734,13 @@ CRITICAL INSTRUCTIONS - BE EXTREMELY COMPREHENSIVE:
 Book Content:
 {context[:30000]}  # Very large context for comprehensive extraction
 
+IMPORTANT JSON FORMATTING RULES:
+- Use double quotes for all strings
+- Escape any quotes inside strings with backslash
+- No trailing commas
+- No comments
+- Valid JSON syntax only
+
 Return ONLY the JSON, no other text."""
 
         try:
@@ -725,16 +780,50 @@ Return ONLY the JSON, no other text."""
                 print(f"   ❌ JSON parsing error: {e}")
                 print(f"   📝 Content preview: {content[:500]}...")
                 
-                # Try to fix common JSON issues
+                # Try to fix common JSON issues with more comprehensive cleaning
                 try:
-                    # Remove any trailing commas before closing braces/brackets
                     import re
+                    
+                    # Remove any trailing commas before closing braces/brackets
                     content = re.sub(r',(\s*[}\]])', r'\1', content)
+                    
+                    # Fix unescaped quotes in strings (common issue)
+                    content = re.sub(r'(?<!\\)"(?=.*":)', r'\\"', content)
+                    
+                    # Fix missing quotes around keys
+                    content = re.sub(r'(\w+)(\s*:)', r'"\1"\2', content)
+                    
+                    # Fix single quotes to double quotes
+                    content = re.sub(r"'([^']*)'", r'"\1"', content)
+                    
+                    # Remove any control characters that might break JSON
+                    content = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content)
+                    
+                    # Try to extract just the JSON part if there's extra text
+                    if '{' in content and '}' in content:
+                        start_idx = content.find('{')
+                        end_idx = content.rfind('}') + 1
+                        content = content[start_idx:end_idx]
+                    
                     entities_data = json.loads(content)
-                    print(f"   ✅ Fixed JSON parsing")
+                    print(f"   ✅ Fixed JSON parsing with comprehensive cleaning")
                 except json.JSONDecodeError as e2:
                     print(f"   ❌ Still failed after cleanup: {e2}")
-                    raise e2
+                    print(f"   📝 Cleaned content preview: {content[:500]}...")
+                    
+                    # Last resort: try to extract partial data
+                    try:
+                        # Try to extract just entities if relationships are broken
+                        entities_match = re.search(r'"entities"\s*:\s*\{[^}]*\}', content, re.DOTALL)
+                        if entities_match:
+                            partial_json = '{"entities": ' + entities_match.group(0).split(':', 1)[1] + ', "relationships": []}'
+                            entities_data = json.loads(partial_json)
+                            print(f"   ⚠️ Extracted partial data (entities only)")
+                        else:
+                            raise e2
+                    except:
+                        print(f"   ❌ Complete failure - returning empty data")
+                        raise e2
             
             # Validate structure
             if 'entities' not in entities_data or 'relationships' not in entities_data:
@@ -748,11 +837,96 @@ Return ONLY the JSON, no other text."""
             
         except json.JSONDecodeError as e:
             print(f"   ❌ JSON parsing error: {e}")
-            print(f"   🔄 Returning empty entities as fallback")
-            return {'entities': {}, 'relationships': []}
+            print(f"   🔄 Trying fallback simple extraction...")
+            return self._extract_entities_fallback(book_id, context)
         except Exception as e:
             print(f"   ❌ Error extracting entities: {e}")
-            print(f"   🔄 Returning empty entities as fallback")
+            print(f"   🔄 Trying fallback simple extraction...")
+            return self._extract_entities_fallback(book_id, context)
+    
+    def _extract_entities_fallback(self, book_id: str, context: str) -> Dict[str, Any]:
+        """
+        Fallback method for entity extraction with simpler prompt
+        """
+        print(f"   🔄 Using fallback extraction method...")
+        
+        fallback_prompt = f"""Extract key entities and relationships from this book content. Return ONLY valid JSON.
+
+{{
+    "entities": {{
+        "entity_id": {{
+            "name": "Entity Name",
+            "type": "character|place|object|event|concept",
+            "description": "Brief description",
+            "book_id": "{book_id}",
+            "importance": 0.8,
+            "mentions": ["quote1"],
+            "first_mentioned": "context"
+        }}
+    }},
+    "relationships": [
+        {{
+            "from": "entity_id_1",
+            "to": "entity_id_2", 
+            "type": "relationship_type",
+            "strength": 0.8,
+            "description": "How they are related",
+            "book_id": "{book_id}",
+            "evidence": "quote"
+        }}
+    ]
+}}
+
+Book Content:
+{context[:15000]}
+
+Return ONLY valid JSON, no other text."""
+
+        try:
+            messages = [
+                {"role": "system", "content": "You are an expert at extracting entities from text. Return only valid JSON."},
+                {"role": "user", "content": fallback_prompt}
+            ]
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=4000,  # Smaller token limit for fallback
+                temperature=0.1   # Lower temperature for more consistent JSON
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Clean up the response
+            if content.startswith('```json'):
+                content = content[7:]
+            if content.endswith('```'):
+                content = content[:-3]
+            
+            content = content.strip()
+            
+            # Extract JSON part
+            if '{' in content and '}' in content:
+                start_idx = content.find('{')
+                end_idx = content.rfind('}') + 1
+                content = content[start_idx:end_idx]
+            
+            # Parse JSON
+            entities_data = json.loads(content)
+            
+            # Validate structure
+            if 'entities' not in entities_data or 'relationships' not in entities_data:
+                raise ValueError("Invalid fallback extraction structure")
+            
+            entity_count = len(entities_data['entities'])
+            relationship_count = len(entities_data['relationships'])
+            print(f"   ✅ Fallback extracted {entity_count} entities and {relationship_count} relationships")
+            
+            return entities_data
+            
+        except Exception as e:
+            print(f"   ❌ Fallback extraction also failed: {e}")
+            print(f"   🔄 Returning empty entities as final fallback")
             return {'entities': {}, 'relationships': []}
     
     def build_knowledge_graph_from_entities(self, book_id: str, entities_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -762,11 +936,33 @@ Return ONLY the JSON, no other text."""
         if not entities_data or 'entities' not in entities_data:
             return {'entities': {}, 'relationships': []}
         
+        # Check if knowledge graph cache exists and is valid
+        kg_cache_file = os.path.join(self.knowledge_graph.kg_dir, f"kg_{book_id}.pkl")
+        current_content_hash = self.calculate_content_hash(book_id)
+        
+        if os.path.exists(kg_cache_file):
+            try:
+                with open(kg_cache_file, 'rb') as f:
+                    kg_cached_data = pickle.load(f)
+                
+                # Check if KG cache is still valid (both time and content)
+                if self.knowledge_graph.is_cache_valid(kg_cached_data.get('metadata', {})):
+                    cached_content_hash = kg_cached_data.get('metadata', {}).get('content_hash', '')
+                    
+                    # Only use KG cache if content hasn't changed
+                    if current_content_hash and current_content_hash == cached_content_hash:
+                        print(f"   📂 Using cached knowledge graph for {book_id}")
+                        return kg_cached_data['knowledge_graph']
+                    else:
+                        print(f"   🔄 Knowledge graph content changed for {book_id}, rebuilding...")
+            except Exception as e:
+                print(f"   ⚠️ Error loading KG cache for {book_id}: {e}")
+        
         # Store entities in ChromaDB for semantic search
         self.knowledge_graph._store_entities_in_chromadb(book_id, entities_data['entities'])
         
-        # Save the knowledge graph to cache file
-        self.knowledge_graph._save_knowledge_graph_to_cache(book_id, entities_data)
+        # Save the knowledge graph to cache file with content hash
+        self.knowledge_graph._save_knowledge_graph_to_cache(book_id, entities_data, content_hash=current_content_hash)
         
         return entities_data
 
