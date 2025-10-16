@@ -87,7 +87,7 @@ def query_books():
     {
         "question": "Your question about the books",
         "book": "optional book_id (defaults to all books)",
-        "context_chunks": 80,  # optional, defaults to 80
+        "context_chunks": 42,  # optional, defaults to 42 (reduced for faster responses)
         "use_book_knowledge": true  # optional, defaults to true
     }
     
@@ -120,7 +120,7 @@ def query_books():
         # Optional parameters with defaults
         book_id = data.get('book', None)  # None means all books
         model = data.get('model', 'anthropic/claude-sonnet-4.5')  # Default model
-        n_results = data.get('context_chunks', 60)
+        n_results = data.get('context_chunks', 42)  # Reduced from 60 to 42 (30% reduction)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
         # Convert single book to list format for RAG system
@@ -299,7 +299,7 @@ def query_with_drafts():
         session_id = data.get('session_id')
         book_id = data.get('book', None)
         model = data.get('model', 'anthropic/claude-sonnet-4.5')
-        n_results = data.get('context_chunks', 60)
+        n_results = data.get('context_chunks', 42)  # Reduced from 60 to 42 (30% reduction)
         use_book_knowledge = data.get('use_book_knowledge', True)
         
         # Convert single book to list format for RAG system

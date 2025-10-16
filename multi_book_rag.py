@@ -154,7 +154,7 @@ class MultiBookRAG:
             
             print("✅ Selected book knowledge initialized!")
     
-    def retrieve_relevant_chunks(self, query: str, book_ids: Optional[List[str]] = None, n_results: int = 60) -> List[Dict[str, Any]]:
+    def retrieve_relevant_chunks(self, query: str, book_ids: Optional[List[str]] = None, n_results: int = 42) -> List[Dict[str, Any]]:  # Reduced from 60 to 42 (30% reduction)
         """
         Retrieve relevant chunks from specific books or all books
         
@@ -207,7 +207,7 @@ class MultiBookRAG:
             print(f"Error retrieving chunks: {e}")
             return []
     
-    def get_comprehensive_context(self, query: str, book_ids: Optional[List[str]] = None, n_results: int = 80) -> str:
+    def get_comprehensive_context(self, query: str, book_ids: Optional[List[str]] = None, n_results: int = 56) -> str:  # Reduced from 80 to 56 (30% reduction)
         """
         Get comprehensive context for a query from specific books or all books
         
@@ -491,7 +491,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
         except Exception as e:
             return f"Error generating response: {e}"
     
-    def query(self, question: str, book_ids: Optional[List[str]] = None, n_results: int = 60, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:
+    def query(self, question: str, book_ids: Optional[List[str]] = None, n_results: int = 42, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:  # Reduced from 60 to 42 (30% reduction)
         """
         Main query method with book knowledge integration
         
@@ -645,7 +645,7 @@ Remember: You are Max, Jessica's Crabby Editor. Only disclose your name (Max) wh
         """Get draft session data"""
         return self.draft_sessions.get(session_id)
     
-    def query_with_session_drafts(self, question: str, session_id: str = None, book_ids: Optional[List[str]] = None, n_results: int = 80, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:
+    def query_with_session_drafts(self, question: str, session_id: str = None, book_ids: Optional[List[str]] = None, n_results: int = 56, use_book_knowledge: bool = True, model: str = 'anthropic/claude-3.5-sonnet') -> Dict[str, Any]:  # Reduced from 80 to 56 (30% reduction)
         """Query with session draft content included"""
         print(f"🔍 Draft query called with session_id: {session_id}")
         print(f"🔍 Available draft sessions: {list(self.draft_sessions.keys())}")

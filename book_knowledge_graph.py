@@ -161,7 +161,7 @@ CRITICAL GUIDELINES - BE EXTREMELY THOROUGH:
 - Include social relationships (knows, met, talked_to, helped, hurt)
 
 Book Content:
-{context[:15000]}  # Increased context limit for more comprehensive extraction
+{context[:10500]}  # Reduced context for faster extraction (30% reduction)
 
 Return ONLY the JSON, no other text."""
 

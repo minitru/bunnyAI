@@ -834,7 +834,7 @@ CRITICAL INSTRUCTIONS - BE EXTREMELY COMPREHENSIVE:
 - Don't miss ANY event, no matter how brief
 
 Book Content:
-{context[:30000]}  # Very large context for comprehensive extraction
+{context[:21000]}  # Reduced context for faster extraction (30% reduction)
 
 IMPORTANT JSON FORMATTING RULES:
 - Use double quotes for all strings
@@ -980,7 +980,7 @@ Return ONLY the JSON, no other text."""
 }}
 
 Book Content:
-{context[:15000]}
+{context[:10500]}  # Reduced context for faster fallback extraction (30% reduction)
 
 Return ONLY valid JSON, no other text."""
 

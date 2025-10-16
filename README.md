@@ -75,8 +75,8 @@ python main_multi_book.py
 - **Book-specific queries** with targeted context
 
 ### Enhanced Context Retrieval
-- **80 chunks** per query for maximum context
-- **40,000+ characters** of context per query
+- **56 chunks** per query for optimal context (reduced from 80 for faster responses)
+- **28,000+ characters** of context per query (reduced from 40,000+ for faster responses)
 - **Comprehensive book analysis** with 200+ chunks
 - **Multi-pass retrieval** with character and conflict detection
 
@@ -131,7 +131,7 @@ CHROMADB_DATABASE=your_chromadb_database_here
 
 ### Context Enhancement
 - **Before**: ~13,000 characters
-- **After**: ~41,000 characters (3x improvement)
+- **After**: ~28,000 characters (2.1x improvement, optimized for speed)
 - **Book Analysis**: 100+ chunks vs 50 before
 - **Character Queries**: 15+ specific searches
 - **Plot Queries**: 20+ conflict-related searches
